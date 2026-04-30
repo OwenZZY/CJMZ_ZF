@@ -1,4 +1,5 @@
 Paper on arXiv: https://arxiv.org/abs/2402.08866
+This is a demo of how to use our algorithm's implementation in Python. The slides that are used for the presentation are available in the folder; the file name is AAAFZF.pdf.  
 
 B. Cameron, J. Janssen, R. Matthew, Z. Zhang. An approximation algorithm for zero forcing. *arXiv preprint* <tt>`arXiv:2402.08866 [math.CO]`</tt>
 
