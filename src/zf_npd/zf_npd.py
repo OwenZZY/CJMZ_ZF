@@ -57,10 +57,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Optional
 
+import zf_npd.zf_closure
 from zf_graph import Graph
-from zf_npd.nice_pd import NicePD
-from zf_npd.zf_arcset import ArcSet
-from zf_npd.zf_closure import zf_closure
+from nice_pd import NicePD
+from zf_arcset import ArcSet
+import zf_closure
 
 
 def zf_npd(g: Graph, npd: NicePD) -> tuple[bytearray, list[bytearray]]:
@@ -87,7 +88,7 @@ def zf_npd(g: Graph, npd: NicePD) -> tuple[bytearray, list[bytearray]]:
             Xz = npd.mask_of(z)          # bytes
             host |= Xz                   # host = X_t^z
             blue = bytearray(Xt); blue |= Xz
-            W = closure.white(blue, host)          # L3b
+            W = zf_closure.closure(blue, host)          # L3b
         # ---- L4: reverse; sources of A become sinks ----------------
         A.reverse()
         if any(W):                                     # L6
