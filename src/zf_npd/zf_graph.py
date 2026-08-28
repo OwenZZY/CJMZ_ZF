@@ -1,52 +1,37 @@
 """Graph with dual adjacency storage (zf_npd).
 
-Vertices are names (ints). Construction aligns names into 0..n-1 by a single
-shift: n = len(adj), and the name range must satisfy
+Vertices are canonical ids 0..n-1. Input names (ints) may come shifted:
+with n = len(adj) the name range must satisfy high - low <= n - 1, so the
+single shift low -> 0 lands every name in 0..n-1. Gaps are isolated
+vertices and are harmless; a span >= n is rejected. The applied shift is
+stored as shift_by (input name v -> id v - shift_by).
 
-    high - low <= n - 1
+Storage — one representation is the mask of the other:
+    adj_list[u]    sorted neighbour list of u, ascending
+    adj_rows[u]    bytearray of length n; adj_rows[u][v] == 1 iff uv is an edge
 
-so one shift (low -> 0) fits every name into a length-n mask. Gaps in the
-range are isolated vertices and are harmless. A span >= n (i.e. >= n+1 slots
-in the window) is rejected: no single shift can fit it. The applied shift is
-recorded on the object as shift_by.
-
-Dual representation, one the mask of the other:
-
-    adj_list[u]        sorted list of neighbours of u, ascending
-    adj_rows[u]        bytearray of length n; adj_rows[u][v] == 1
-                       iff v in adj_list[u]
-
-adj_list is the canonical form (built from the input); adj_rows is derived
-from it, so the correspondence holds by construction. Self-loops are dropped
-at construction (filtered inside the row comprehension). The input is assumed
-simple: no duplicate entries, and both directions of every edge listed.
-
-The input adj is only read — never stored, never mutated.
+adj_list is canonical (built from the input); adj_rows is derived from it,
+so the two cannot drift. Input assumptions: simple graph (both directions
+of every edge listed, no duplicates). Self-loops are dropped. The input
+list is read only — never stored, never mutated.
 """
 
 from __future__ import annotations
 
 
 def check_ids(adj: list[list[int]]) -> tuple[int, int]:
-    """Format check only (no graph object is built).
+    """Return (n, shift_by): n = len(adj); every name v maps to id v - shift_by.
 
-    n is recorded as the row count: n = len(adj).
-    Returns (n, shift_by): aligning every name v to v - shift_by lands it in
-    0..n-1. For an already-0-based input shift_by == 0, so the shift is the
-    identity.
-
-    Boundary: reject iff high - low >= n. The names must span at most n
-    consecutive slots; a span of exactly n covers n+1 slots and can never
-    fit into n mask positions, shift or no shift.
+    Reject iff high - low >= n: the window [low, high] then holds >= n+1
+    slots, and no single shift can fit them into n mask positions.
     """
     n = len(adj)
     names = [v for row in adj for v in row]
     if not names:
-        return n, 0                      # edgeless input: any shift vacuous
+        return n, 0                     # edgeless input: any shift is vacuous
     if not all(isinstance(v, int) for v in names):
         raise TypeError("vertex names must be ints")
-    low = min(names)
-    high = max(names)
+    low, high = min(names), max(names)
     if high - low >= n:
         raise ValueError(
             f"names span {high - low + 1} slots ({low}..{high}) "
@@ -57,25 +42,28 @@ def check_ids(adj: list[list[int]]) -> tuple[int, int]:
 
 
 class Graph:
-    """Graph on vertices 0..n-1 after alignment (see module docstring).
+    """Graph on vertices 0..n-1 after alignment.
 
-    n:        order = len(adj)
-    shift_by: shift applied to input names (input name v -> stored id v - shift_by)
-    adj_list: list[list[int]], one sorted neighbour row per vertex
-    adj_rows: list[bytearray], mask form of adj_list
-    induced_subgraph(host): new Graph over the same ids, edges inside host only
+    n         order = len(adj)
+    shift_by  input-name shift recorded at construction
+    adj_list  list[list[int]], one ascending neighbour row per vertex
+    adj_rows  list[bytearray], mask form of adj_list
     """
 
     def __init__(self, adj: list[list[int]]) -> None:
-        n, shift_by = check_ids(adj)     # order = len(adj); names checked here
+        """Validate names, record the shift, build both representations."""
+        n, shift_by = check_ids(adj)
         self._build(adj, n, shift_by)
 
     @classmethod
     def _from_adj0(cls, adj: list[list[int]]) -> Graph:
-        """Internal fast path: `adj` is already 0-based, sorted, loop-free
-        (e.g. produced by induced_subgraph). No check_ids, no alignment —
-        ids are canonical by construction, so no relabelling can occur."""
-        g = cls.__new__(cls)             # skip __init__ (no name alignment)
+        """Build from already-canonical rows (0-based, ascending, loop-free).
+
+        Skips __init__ via __new__ so no re-alignment runs: internally
+        produced rows (induced_subgraph) may contain no id 0, and the
+        aligning path would silently relabel every vertex.
+        """
+        g = cls.__new__(cls)
         g._build(adj, len(adj), 0)
         return g
 
@@ -83,33 +71,26 @@ class Graph:
         self.n = n
         self.shift_by = shift_by
 
-        # canonical list form: shift + self-loop filter + sort, one pass
+        # one pass per entry: the walrus computes the shifted id once, the
+        # filter drops self-loops, the sort gives ascending rows (Timsort
+        # runs near-linear on the already-ascending filtered rows)
         self.adj_list = [
             sorted(w for v in row if (w := v - shift_by) != u)
             for u, row in enumerate(adj)
         ]
 
-        # derived mask form: one bytearray row per vertex
-        # (self-loops already filtered above, so no diagonal handling needed)
         self.adj_rows = [bytearray(n) for _ in range(n)]
         for u, row in enumerate(self.adj_list):
             for v in row:
                 self.adj_rows[u][v] = 1
 
     def induced_subgraph(self, host: bytearray) -> Graph:
-        """Graph over the SAME ids 0..n-1, edges restricted to `host`.
+        """New Graph on the SAME ids, edge kept iff both endpoints in host.
 
-        host: bytearray mask of length n, host[v] == 1 iff v is kept.
-        Vertices outside host become isolated (empty rows); an edge survives
-        iff both endpoints are in host.
-
-        Linear: O(n + m) — each row of adj_list is filtered once; rows stay
-        ascending, so the rebuild's sorts are Timsort's near-linear case.
-        (Replaces the int-AND over adj_rows: that was O(n^2/64) C-level work
-        — cheap, but quadratic, and pure overhead on sparse graphs.)
-
-        Returns a NEW Graph over the same ids. Its shift_by is 0: these are
-        internal canonical ids, so the parent's shift_by no longer applies.
+        host: bytearray mask of length n, values 0/1. Vertices outside host
+        become isolated. O(n + m): each adj_list row is filtered once.
+        The result's shift_by is 0 (canonical ids; the parent's shift no
+        longer applies). The parent is never mutated.
         """
         assert len(host) == self.n, (
             f"host must be a mask of length {self.n}, got {len(host)}"
