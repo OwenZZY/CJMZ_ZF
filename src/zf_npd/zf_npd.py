@@ -1,105 +1,105 @@
-"""L3 driver — Algorithm 4.2 main loop.
+"""L3 driver — Algorithm 4.2 main loop (zf_npd).
 
 zf-npd: zero forcing via nice path decomposition.
 
-Clean reimplementation (refactor of github.com/OwenZZY/CJMZ_ZF) of Algorithm 4.2
-from *An approximation algorithm for zero forcing*
-(Cameron-Janssen-Mathew-Zhang, arXiv:2402.08866): a deterministic
-(pw(G)+1)-approximation of the zero forcing number, O(nm) time.
+Implementation of Algorithm 4.2 from *An approximation algorithm for zero
+forcing* (Cameron-Janssen-Mathew-Zhang, arXiv:2402.08866v1): a deterministic
+(pw(G)+1)-approximation of the zero forcing number.
 
-STATUS: INTERFACE SKELETON. The authoritative driver design (step order,
-host-mask semantics, NicePD.op contract, traps T1-T5) lives in
-docs/zf_npd_step_order.md; implement that file literally. Bodies raise
-NotImplementedError until implementation is authorized. Nothing here is
-implementation logic.
+Design record: docs/zf_npd_step_order.md (step order, traps T1-T6).
+Interface contracts: docs/HANDOFF.md.
 
-Layers (spec §9):
-  L1  build_graph()  — construct and freeze the input
-  L2  Graph, ArcSet, white(), fas()  — stateless primitives, bag-agnostic
-  L3  zf_npd()       — Algorithm 4.2 main loop (this module)
+Class contracts in use:
+  - Graph:      n, induced_subgraph, N, deg
+  - NicePD:     k, mask_of(i), op(i)    (op(i) = transition X_i -> X_{i+1})
+  - ArcSet:     extend, reverse, delete_heads, sources
+  - zf_closure: closure(g, blue, host=None) -> (W: bytearray, A: ArcSet)
 
-Conventions (docs/zf_npd_step_order.md):
-  - All inputs frozen; the only mutable object crossing calls is ArcSet.
-  - Universal vertex-set exchange format: bytearray mask of length n (0/1).
-  - host = mask of X_t^z, monotone within a segment (T4); G(t,z) never
-    materialized; white()/fas() see only host vertices.
-  - S is never materialized in the loop; single sources() at the end.
+Conventions:
+  - Masks are bytes/bytearray of length n, one byte per vertex, 0/1.
+    CPython bytearrays have no |/&/~ between masks — use _mask_or.
+  - S is never materialized in the loop; a single sources() at the end.
 
-Authoritative loop (L1..L8, see docs/zf_npd_step_order.md):
-
-    closure = zf_closure(g.adj)
-    A = ArcSet(g.n); F = []; t = 0
-    while True:
-        Xt = npd.mask_of(t)
-        host = bytearray(Xt); bag = bytearray(Xt)
-        W = bytearray(g.n); z = t
-        while not any(W) and z <= npd.k:          # L3; must evaluate z=k+1 (T1)
-            z += 1
-            v, is_ins = npd.op(z)
-            if is_ins:
-                host[v] = 1; bag[v] = 1; continue # White() provably empty
-            bag[v] = 0                            # host unchanged (T4)
-            blue = bytearray(Xt); _mask_or(blue, bag)   # recompute (T3)
-            W = closure.white(blue, host)
-        A.reverse()                               # L4
-        if any(W):                                # L6
-            F.append(W)
-            blue[v] = 1                           # L6c: X_t U X_{z-1} (T5)
-            A.extend(closure.fas(blue, host))
-            A.delete_heads(bag)                   # L6d (T2)
-            t = z; continue
-        A.extend(closure.fas(bytearray(Xt), host)) # L7a (z=k+1)
-        return A.sources(), F                     # L5 once, L8
+A_keep invariant (per segment): after each scan step z with W empty
+(evaluated or skipped), A_keep is a FAS of G(t,z) whose sources are
+X_t ∪ X_z. At an exit with W ≠ ∅ (always a forget step), A_keep is
+exactly FAS(X_t ∪ X_{z-1}, G(t,z)) — the L6c object — so no closure
+call is ever repeated, including in the final L7a branch.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Iterable, Optional
-
-import zf_npd.zf_closure
-from zf_graph import Graph
-from nice_pd import NicePD
-from zf_arcset import ArcSet
-import zf_closure
+from .zf_arcset import ArcSet
+from .zf_closure import closure
 
 
-def zf_npd(g: Graph, npd: NicePD) -> tuple[bytearray, list[bytearray]]:
-    """Algorithm 4.2 driver: (pw(G)+1)-approximate zero forcing set (L3).
+def _mask_or(dst: bytearray, src) -> None:
+    """Union in place: dst[v] = 1 wherever src[v] == 1."""
+    for i, b in enumerate(src):
+        if b:
+            dst[i] = 1
 
-    Preconditions: npd is a validated nice path decomposition of g.
-    Returns: (S, F) — S the mask of a zero forcing set, F a list of fort masks
-    forming a fort packing, with |S| <= (npd.width + 1)|F|.
-    Complexity: O(nm) total (spec §4).
+
+def _unpack(mask: bytearray) -> list[int]:
+    """Vertices with bit set, ascending — output form of a mask."""
+    return [v for v, bit in enumerate(mask) if bit]
+
+
+def zf_npd(g, npd) -> tuple[list[int], list[list[int]]]:
+    """Algorithm 4.2 driver: (pw(G)+1)-approximate zero forcing set.
+
+    Preconditions: npd is a validated nice path decomposition of g, and
+    both describe the same vertex-name space (g.shift_by == npd.shift_by;
+    the driver raises ValueError otherwise).
+    Returns: (S, F) — S a zero forcing set as a list of vertex NAMES
+    (ascending, id + g.shift_by); F a list of forts, each a list of vertex
+    names (ascending), forming a fort packing, with |S| <= (npd.width+1)|F|.
+
+    Edge case: Graph infers shift_by as the minimum adjacency entry, so an
+    edgeless graph gets shift_by = 0 and its outputs are ids; the caller
+    owns the name mapping in that case.
     """
+    if g.shift_by != npd.shift_by:       # input precondition: same name space
+        raise ValueError(
+            f"g.shift_by ({g.shift_by}) != npd.shift_by ({npd.shift_by}); "
+            "construct NicePD with shift_by=g.shift_by"
+        )
+    A = ArcSet(g.n)                      # L1
+    F = []                               # L1
+    t = 0                                # L1
 
-    closure = zf_closure(g.adj)          # bound once; bag-agnostic engine
-    A = ArcSet(g.n)                      # empty FAS (all NIL)
-    F = []                               # fort packing: list of bytearrays
-    t = 0
-    while True:
-        Xt = bytearray(npd.mask_of(t))   # X_t, fixed for this segment
-        host = bytearray(Xt)             # running union X_t^z
+    while True:                          # segment (L2)
+        Xt = npd.mask_of(t)              # frozen bytes mask of X_t
+        host = bytearray(Xt)             # running union X_t^z (grows only, T4)
+        Xz = bytearray(Xt)               # current bag X_z
         W = bytearray(g.n)               # empty mask
         z = t
-        # ---- L3: scan forward -------------------------------------
-        while not any(W) and z <= npd.k:
-            z += 1
-            Xz = npd.mask_of(z)          # bytes
-            host |= Xz                   # host = X_t^z
-            blue = bytearray(Xt); blue |= Xz
-            W = zf_closure.closure(blue, host)          # L3b
-        # ---- L4: reverse; sources of A become sinks ----------------
-        A.reverse()
-        if any(W):                                     # L6
-            F.append(W)                                # L6a (fort!)
-            # L6c: union; precondition below (C1)
-            A.extend(closure.fas(bytearray(Xt) | npd.mask_of(z - 1), host))
-            # L6d: X_z becomes the new source bag (no-op if z = k+1)
-            A.delete_heads(bytearray(npd.mask_of(z)))
-            t = z                                      # L6e
-        else:                                          # L7: z = k+1
-            A.extend(closure.fas(bytearray(Xt), host)) # L7a
-            break
-    S = A.sources()                                    # one (L5) at the very end
-    return S, F
+        A_keep = ArcSet(g.n)             # FAS of G(t,t) with sources X_t
+
+        while not any(W) and z <= npd.k:  # L3: body increments FIRST, so the
+            z += 1                        # last evaluated bag is z = k+1 (T1)
+            v, is_insert = npd.op(z - 1)  # op(i) = transition X_i -> X_{i+1}
+            if is_insert:
+                host[v] = 1              # union grows (T4)
+                Xz[v] = 1
+                continue                 # W provably empty; A_keep unchanged
+            Xz[v] = 0                    # forget: only the bag shrinks (T4)
+            blue = bytearray(Xt)         # recompute every step (T3)
+            _mask_or(blue, Xz)           # blue = X_t ∪ X_z
+            W, A_step = closure(g, blue, host)
+            if not any(W):
+                A_keep = A_step          # last good FAS of G(t,z)
+
+        A.reverse()                      # L4
+        if any(W):                       # L6: exit was a forget with W ≠ ∅
+            F.append(_unpack(W))         # L6a: id form internally; names at L8
+            A.extend(A_keep)             # L6c: A_keep = FAS(X_t ∪ X_{z-1}, G(t,z))
+            A.delete_heads(Xz)           # L6d: exactly the heads in X_z (T2)
+            t = z                        # L6e
+            continue
+        # L7: z = k+1, W = ∅
+        A.extend(A_keep)                 # L7a: A_keep = FAS(X_t, G(t,k+1))
+        # L5 once, then L8 — outputs in the graph's NAME space (id + shift_by)
+        shift = g.shift_by
+        return ([v + shift for v in _unpack(A.sources())],
+                [[v + shift for v in fort] for fort in F])

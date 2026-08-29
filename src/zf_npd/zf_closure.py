@@ -1,41 +1,46 @@
-"""Colour-change engine (zero-forcing closure) on an induced-host view.
+"""Colour-change engine (zero-forcing closure) — zf_npd.
 
-Implements the exact design in docs/zf_npd_step_order.md, section
-"Closure engine — exact design". The induced subgraph G(t,z) is never
-materialised as a graph object: it is the pair (self.adj, host), where
-host is a 0/1 bytearray mask and the neighbour relation inside the host is
-
-    w is a host-neighbour of u  <=>  w in adj[u] and host[w] == 1.
+Runs the zero-forcing process on the induced subgraph G[host].  The
+subgraph is materialised by Graph.induced_subgraph over the SAME vertex
+ids (vertices outside host become isolated) and those outside vertices are
+marked blue — in the induced graph they are inert, so this is pure
+bookkeeping that keeps the final white mask correct without host checks.
 
 The process is carried by the count array
 
-    cnt[u] = #{ w in adj[u] : host[w] == 1 and w is white }   (loop invariant)
+    count[u] = #{ w in G.N(u) : coloured[w] }   (loop invariant; read only
+                                                for blue u)
 
-so the colour-change rule becomes: blue u is eligible  <=>  cnt[u] == 1,
-and its unique white neighbour is found by one filtered scan of adj[u].
+so the colour-change rule becomes: blue u is eligible  <=>
+count[u] == deg(u) - 1, i.e. exactly one non-coloured neighbour, found by
+one filtered scan of N(u).
 
-white() is order-independent (the derived colouring is unique, [Barioli et
-al. 2010]); fas() applies the paper's canon: one force per step, performed
-by the eligible blue vertex of smallest index (min-heap keyed by vertex id).
-Both are deterministic and O(n + m) per call (fas: O((n+m) log n)).
+The derived colouring is unique ([Barioli et al. 2010]); the forcing order
+here follows the paper's canon: one force per step, performed by the
+eligible blue vertex of smallest index (min-heap keyed by vertex id).
+Deterministic; O((n + m) log n) per call.
 """
 
 from __future__ import annotations
 
+from heapq import heappop, heappush
 
-from heapq import heapify, heappop, heappush
+from .zf_arcset import ArcSet
 
-from zf_arcset import ArcSet
-
-
-# ----------------------------------------------------------------------------
-# closure(g, blue_in, host=None) -> (W: bytearray, A: ArcSet)
-# Snippet only — not written to any file.
-# Mask convention (repo): bytearray of length g.n, one byte per vertex, 0/1.
-# ----------------------------------------------------------------------------
-from heapq import heappush, heappop            # stdlib, built-in priority queue
 
 def closure(g, blue_in, host=None):
+    """Run zero forcing on G[host] from blue_in; return (W, A).
+
+    g        Graph over vertices 0..n-1.
+    blue_in  bytearray mask of length g.n: initial blue set (read-only;
+             never mutated).
+    host     bytearray mask of length g.n, or None (= all of g).
+
+    Returns:
+        W  bytearray mask of the vertices that remain white.
+        A  fresh ArcSet holding one arc u -> v per forcing step, in the
+           paper's canonical order (smallest eligible forcer first).
+    """
     # ---- early exit: no white vertex can ever exist ------------------------
     # any() over a generator — no mask arithmetic needed; O(n)
     if host is None:
@@ -50,7 +55,7 @@ def closure(g, blue_in, host=None):
         G = g
         coloured = bytearray(blue_in)          # builtin copy; caller's mask untouched
     else:
-        G = g.induced_subgraph(host)           # PLACEHOLDER P1 (contract below)
+        G = g.induced_subgraph(host)           # same ids; outside vertices isolated
         coloured = bytearray(blue_in)
         for v, bit in enumerate(host):         # outside host = blue (inert in G)
             if not bit:
