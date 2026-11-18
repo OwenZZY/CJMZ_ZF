@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# Local-only reference material.
+# The arXiv source of the paper is kept locally for reading. The public repo
+# should link to https://arxiv.org/abs/2402.08866 instead of vendoring it
+# (authorship/redistribution is a Stage 5 decision; see HANDOFF D6).
+docs/arXiv-2402.08866v1/
