@@ -55,10 +55,17 @@ algorithm + invariants · 1.4 certificates + acceptance tests · 1.5 complexity
   read earlier sessions in this workspace), requested by Owen for cross-session
   recall. Installed; **DSH restart required to activate**. No other profile
   changes. (2026-11-18)
-- **C4** The workspace is a local git repository on `main`; no remote is
-  configured. One accepted step = one commit whose message summarises the
-  HANDOFF delta, and the HANDOFF is updated in that same commit. The arXiv
-  source is gitignored (local reference only). (2026-11-18)
+- **C4** The workspace is a local git repository on `main` (remote per C5). One
+  accepted step = one commit whose message summarises the HANDOFF delta, and the
+  HANDOFF is updated in that same commit. The arXiv source is gitignored (local
+  reference only). (2026-11-18)
+- **C5** This project's remote is the existing public repo
+  `https://github.com/OwenZZY/CJMZ_ZF` — the repository the paper cites as its
+  Python implementation. Its current content is replaced wholesale by this
+  project at the v0.1.0 release; nothing is pushed before then. The legacy tip
+  `93fbfdbe01f015723694eb059bd76fe11e7709a7` (`main`, 2026-11-18) is preserved
+  under a `legacy` tag before the first push. Remote is configured locally as
+  `origin`; no fetch or push has been performed. (2026-11-18)
 
 ## Open decisions
 
@@ -68,14 +75,21 @@ algorithm + invariants · 1.4 certificates + acceptance tests · 1.5 complexity
   classes are supported. (Stage 1.2)
 - **D3** Python floor and runtime dependency policy (stdlib-only core vs.
   `networkx`). (Stage 1.5)
-- **D4** Relationship to the existing repo `OwenZZY/CJMZ_ZF`: supersede, ignore,
-  or black-box differential comparison. (Stage 1.2)
 - **D5** Dev environment and packaging: `pyproject.toml`, `src/` layout,
   `.venv/` gitignored and never committed, `.gitignore` contents. (Stage 1.5 / 3)
-- **D6** Repository hosting and history: new GitHub repository for this project
-  vs. reusing an existing unrelated remote; when to wire the remote; whether to
-  vendor the arXiv source. Recommendation: fresh repo, remote wired late, no
-  vendoring. (Stage 5; remote may be wired earlier for backup)
+
+## Release plan for v0.1.0 (agreed; do not execute early)
+
+Nothing is pushed before v0.1.0. Then, in this order:
+
+1. `git fetch origin`
+2. `git tag legacy 93fbfdb && git push origin legacy` — preserve the old
+   implementation; if this fails, stop and do not continue.
+3. `git push --force origin main` — repo content becomes this project.
+4. On GitHub: confirm `main` is default; then README, release notes, citation.
+
+Push authentication is not configured in this session (`gh` CLI absent); Owen
+may need to supply credentials, or we switch `origin` to SSH before release.
 
 ## Deferred to Stage 5
 
@@ -85,12 +99,13 @@ in README.
 
 ## Open questions for Owen
 
-- **Q1** (D4) Should the new repo replace `CJMZ_ZF`, and must it reproduce that
-  implementation's outputs, or only the paper's guarantees?
 - **Q2** (D2) May v1 require a path decomposition as input, i.e. ship no
   pathwidth solver?
 - **Q3** (0.3) Beyond the three output guarantees (ZF set, fort packing,
   ratio), which paper results should the release demonstrate empirically?
+- **Q4** (C5) Must the new implementation reproduce the *legacy* CJMZ_ZF
+  outputs exactly, or only the paper's guarantees? Black-box comparison against
+  the `legacy` tag is possible at Stage 4 if wanted.
 
 ## Guards
 
@@ -101,6 +116,9 @@ Why earlier attempts went wrong, and what we do instead:
 - Tie-breaking drift → the canonical forcing rule is fixed once in `SPEC.md` and
   pinned by golden traces.
 - Spec as prose summary → `SPEC.md` must be implementable without the paper (C2).
+- Contamination → do not read the legacy CJMZ_ZF source during implementation;
+  it stays available in the `legacy` tag for black-box output comparison only
+  (Q4), not as a design reference.
 - Scope creep → pathwidth computation, treewidth and PSD variants are out of
   scope unless a `D#` says otherwise.
 
@@ -119,3 +137,6 @@ write it to `docs/paper-notes.md`.
 - 2026-11-18 initialised the local git repository (no remote); first commit
   holds `AGENTS.md`, `HANDOFF.md` and `.gitignore`. Step 0.1 still awaiting
   sign-off.
+- 2026-11-18 repo decision: reuse `OwenZZY/CJMZ_ZF` (the repo the paper cites)
+  as the artifact's home, replaced at v0.1.0, old tip preserved as `legacy`.
+  `origin` configured; nothing fetched or pushed. D4 and D6 closed, C5 added.
