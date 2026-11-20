@@ -1,8 +1,8 @@
 # HANDOFF — zf-approx
 
-**Where to take off:** read §1 (design principles) and §4 (next rounds), then fill in §6 (your
-comment area). Current status is §2, git is §3. All deliverables are committed at `76700f8`
-(local, not pushed); this handoff file itself is uncommitted.
+**Where to take off:** read §1 (design principles), §4 (next rounds), and §8 (the outside API
+design), then fill in §6 (your comment area). Current status is §2, git is §3. The core
+deliverables are committed at `76700f8` and this handoff is committed too (local, not pushed).
 
 ---
 
@@ -73,7 +73,8 @@ comment area). Current status is §2, git is §3. All deliverables are committed
 1. **One function for the outside.** Today the package exposes several names (`Graph`, `Arcs`,
    `NicePathDecomposition`, `closure`, `zero_forcing_set`, `ZFResult`). You asked for a single
    interface, so I would hide the helpers and leave just one function for you to call.
-   *Default: that function is `zero_forcing_set`; tell me what it should take in and give back.*
+   *The design is now sketched in §8 (graph given as NetworkX; a translation layer in between).
+   Tell me what the function should give back, and fill in API points 2 and 3.*
 2. **Where the decomposition comes from.** Today you supply a ready-made nice path decomposition
    (the list of add/remove steps). Building one from a graph is a separate algorithm (pathwidth).
    *Default: not part of this project unless you ask.*
@@ -113,6 +114,8 @@ comment area). Current status is §2, git is §3. All deliverables are committed
 >   -
 > - What is in scope / out of scope for next round?
 >   -
+> - API points 2 and 3 (see §8 — point 1 is recorded):
+>   -
 > - Anything else:
 >   -
 
@@ -123,3 +126,46 @@ comment area). Current status is §2, git is §3. All deliverables are committed
 - Examples: `examples.py` (`python3 examples.py`).
 - Prior work + tests: `zf-round2-backup.zip`.
 - Paper: `resources/paper/arXiv-2402.08866v1/` · Brimkov PDFs: `resources/brimkov*.pdf`.
+
+## 8. Outside API — design direction (round 8; recorded, NOT yet implemented)
+
+Owner's point 1 is below; points 2 and 3 are still to come from the owner (fill in §6).
+
+**The shape (I agree).** One function is the only thing the outside world calls. It takes two
+things:
+- a graph, given as a **NetworkX graph** (`networkx.Graph`: simple, undirected; its nodes are the
+  vertex names), and
+- a **list of bags** (each bag a set of vertex names) forming a path decomposition — it does
+  **not** have to be "nice".
+
+Between that function and the lean core sits a **translation layer** — the only place that
+touches external formats. It turns the NetworkX graph into the internal `Graph` (0-based indices
+plus the name bijection), and the list of bags into the internal `NicePathDecomposition`. The
+core then runs unchanged on indices, and the layer translates the answer (zero forcing set,
+forts, arcs) back into the original names. This gives exactly "one interface outside, lean
+internal core": the core keeps trusting suitable inputs; all format handling lives in the layer.
+
+**Fixed choice — NetworkX (one graph type, not two).** Of the two options offered (NetworkX or
+an edge list), I fix **NetworkX** as the single outside graph type, because:
+- its nodes already are the vertex names, and it includes isolated vertices (an edge list alone
+  loses isolated vertices, which the bags must still cover);
+- it is the standard graph object in the mathematics/algorithm community, so a public release
+  interoperates naturally;
+- the dependency is confined to the translation layer — the core stays standard-library only.
+
+If a zero-dependency package is preferred, the fallback is one fixed edge-list format; say so and
+I will switch. Otherwise NetworkX stands. The bags are fixed as a **list of sets of names**.
+
+**What the translation layer must do (next-round implementation items):**
+1. NetworkX graph → internal `Graph` (sort names to indices; edges; adjacency).
+2. List of bags → internal nice decomposition. Since the bags need not be nice, this step must
+   **make the decomposition nice**: pad empty end bags and replace any multi-vertex bag-to-bag
+   change with a sequence of single-vertex add/remove steps, keeping the path-decomposition
+   properties. (Standard "nice-ification"; the paper cites Bodlaender–Kloks, Lemma 13.1.3.)
+3. Run the core; translate the result back to names.
+
+**To confirm:** should the translation layer check that the inputs are suitable (e.g. that the
+bags really form a path decomposition), or trust them as the core does? *Default: trust suitable
+inputs, consistent with the core; check only where needed to do the conversion.*
+
+**Owner API points 2 and 3:** _(awaiting input — see §6)_.
