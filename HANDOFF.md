@@ -1,142 +1,125 @@
 # HANDOFF — zf-approx
 
-**Current stage: 0 — close read of the paper.**
-**Current step: 0.1 — definitions and notation ledger** (draft posted in chat on 2026-11-18; awaiting Owen's sign-off before anything is written to `docs/paper-notes.md`).
-**Updated: 2026-11-18**
+**Where to take off:** read §1 (design principles) and §4 (next rounds), then fill in §6 (your
+comment area). Current status is §2, git is §3. All deliverables are committed at `76700f8`
+(local, not pushed); this handoff file itself is uncommitted.
 
-Paper: B. Cameron, J. Janssen, R. Mathew, Z. Zhang,
-*An approximation algorithm for zero forcing*, [arXiv:2402.08866v1](https://arxiv.org/abs/2402.08866).
-Source is kept read-only in `docs/arXiv-2402.08866v1/` (`.tex`, `.bbl`, `.bib`).
+---
 
-## Read order for a cold start
+## 1. Design principles (owner rulings — carry these forward)
 
-1. `HANDOFF.md` — this file.
-2. `AGENTS.md` — working agreement and stage protocol.
-3. `SPEC.md` — normative contract (appears in Stage 1).
-4. `docs/paper-notes.md` — the paper as read; context only, never normative.
+- **Mathematical origin, not software engineering.** Implement the algorithm; no correctness
+  proofs or complexity analysis in the deliverables (AGENTS.md rule 1).
+- **One interface with the outside.** Internally, minimal `try`/`except` — only where necessary.
+  The core trusts that the inputs are suitable; it does not check or clean them.
+- **Core only:** the input/output objects and the main loop. No unasked extras (tests, README,
+  etc.) without offering first.
+- **Confirm scope before building.** When unsure of a requirement, ask the owner one concise
+  question with a stated default (skipping must be safe).
+- **Report style:** four buckets (owner knows / decided / to-decide / agent findings), reading
+  guide at the top, plain self-contained items, no verification busywork. The owner is the
+  paper's author — never ask him to confirm facts from his own paper; resolve and record them.
 
-## Files and their job
+## 2. Current status (rounds 1–5, 2026-11-20/21)
 
-| file | job | status |
-|---|---|---|
-| `HANDOFF.md` | state, decisions, next action — the checkpoint a fresh agent resumes from | live |
-| `SPEC.md` | normative contract; self-contained and prompt-ready (see C2) | Stage 1 |
-| `docs/paper-notes.md` | descriptive transcription: definitions, pseudocode, theorem ledger | Stage 0 |
-| `AGENTS.md` | working agreement, stage protocol | live; patch pending (step 1.1) |
-| `src/`, `tests/`, `README.md`, `LICENSE`, `pyproject.toml` | code, tests, user docs, license, packaging | Stages 2–5 |
+**Done and verified:**
+- Lean core `zf/` (~370 lines, 6 modules), **zero** `try`/`except`/`raise`:
+  - `graph.py` — `Graph`: static, 0-based, name bijection (`names` index→name, `index` name→index),
+    edge list, `adj`; output views `to_names(vertices)` and `arcs_to_names(arcs)`.
+  - `arcs.py` — `Arcs`: `out_arcs`/`in_arcs` (−1 = absent), dynamic `count`/`__len__`,
+    `add`/`delete(heads)`/`reverse`/`extend`/`sources(vertices=None)`/`arcs()`.
+  - `decomposition.py` — `NicePathDecomposition`: `ops=(v,±1)`, `bags`/`k`/`width`, `from_bags`;
+    no validation.
+  - `closure.py` — `closure(graph, blue) -> (white, arcs)`: Brimkov–Fast–Hicks count engine
+    (complementary white counts), **min-index canon** (min-heap), stale-entry guard.
+  - `algorithm.py` — `zero_forcing_set(graph, pd) -> ZFResult(zf_set, forts, arcs)`:
+    Algorithm L1–L8 with the three tricks.
+- **Tricks:** [L3] introduce steps and forgets of vertices in `X_t` skip closure; [L6b] `S`
+  computed once at the end (`A.sources()`); [L6c] closure on the FULL graph with outside vertices
+  blued (no induced subgraph ever built).
+- **Canon:** smallest-eligible-index = paper tex:L621 = the parallel project's `zf_closure.py`;
+  arc-for-arc parity verified (960/960 round 2; 480/480 round 3).
+- `examples.py` — 8 explicit blocks (path a-b-c, P3, P4, C5 A/B, star, K4, C5 fort from `[0]`,
+  sources-mask demo); all assertions pass (`python3 examples.py`).
+- Docs: `SPEC-v1.md` (living spec, lean contract), `docs/definitions.md` (all math definitions,
+  one per line), `docs/closure-review.md` (B-F-H comparison), `REPORT.md` (rounds 1–5).
+- Backup: `zf-round2-backup.zip` = round-2 defensive core + 112-test suite + examples + README,
+  preserved verbatim.
 
-## Stage ladder
+**Key math facts (do not re-derive):**
+- Indexing: `ops` length `2n`; `k = 2n−1` non-empty bags; 0-based op `z−1` produces `X_z`; signs
+  exactly `{+1, −1}` (no `0` op). Audited correct in code and report.
+- `sources(vertices)` = `sources ∩ mask`: needed because [L6c] blues outside vertices, which
+  otherwise appear as spurious sources. The main algorithm computes `sources(A)` once at the end
+  over all `V`, so it needs no mid-loop mask.
+- Input suitability = D1–D4 + every vertex in some bag; the caller's responsibility (weaker than
+  the paper's connectedness assumption, so edgeless/disconnected graphs work).
+- Paper: arXiv:2402.08866v1. Algorithm box tex:L623–665; canon tex:L621; "S once at end" remark
+  tex:L685; closure subroutine = Brimkov–Fast–Hicks, EJOR 273(3):889–903 (2019), Algorithm 1.
+  Local tex: `resources/paper/arXiv-2402.08866v1/2024-02-13-Zero_Forcing_Approx_Alg.tex`.
 
-| stage | deliverable | gate |
-|---|---|---|
-| 0 close read | `docs/paper-notes.md` | Owen signs off each of 0.1–0.4 |
-| 1 spec | `SPEC.md` | every open `D#` closed; SPEC passes the C2 self-containment test |
-| 2 oracle | exact `Z`/pathwidth reference + graph generators | oracle matches hand-computed values on a fixed benchmark |
-| 3 implementation | `src/` | differential tests vs oracle + invariant tests green |
-| 4 evidence | full test suite, experiments | certificates hold on all generated inputs; scaling reported |
-| 5 release | packaging, README, LICENSE, CI | fresh clone, one command reproduces results |
+## 3. Git state
 
-Sub-steps: 0.1 definitions · 0.2 algorithm pseudocode · 0.3 theorem ledger
-(load-bearing vs context) · 0.4 ambiguity list `A#`.
-Stage 1 sub-steps: 1.1 process files · 1.2 data model + primitives · 1.3 main
-algorithm + invariants · 1.4 certificates + acceptance tests · 1.5 complexity
-+ API + environment.
+- The core deliverables are in commit `76700f8` (12 files). This handoff is committed on top of
+  it (the latest commit — run `git log` to see its hash). Everything is local; nothing is pushed.
+- Files in the repository: the 12 deliverables, this handoff, and the baseline `.gitignore`,
+  `AGENTS.md`, `HANDOFF.md`.
+- Left as-is (not committed): your edit to `AGENTS.md`. Never added to the repository:
+  `SPEC.md` (your v0), `resources/` (the papers), `spec2` (not created by me).
+- No push and no remote change (AGENTS.md rule 7).
 
-## Closed decisions
+## 4. What I expect to do next round (I will confirm scope with you first)
 
-- **C1** Repo documentation is GitHub-flavoured Markdown with `$...$` math; the
-  `.tex` source is reference only. (2026-11-18)
-- **C2** `SPEC.md` is a single self-contained file from which a strong model can
-  implement without access to the paper: definitions restated, exact
-  pseudocode, data structures, invariants, literal runnable acceptance tests,
-  golden traces pinning tie-breaking, and a completion checklist. (2026-11-18)
-- **C3** Profile `desktop` gained the official bundle
-  `@deepseek-ai/dsh-experimental-session-search@0.2.2-rc.5` (tools to search and
-  read earlier sessions in this workspace), requested by Owen for cross-session
-  recall. Installed; **DSH restart required to activate**. No other profile
-  changes. (2026-11-18)
-- **C4** The workspace is a local git repository on `main` (remote per C5). One
-  accepted step = one commit whose message summarises the HANDOFF delta, and the
-  HANDOFF is updated in that same commit. The arXiv source is gitignored (local
-  reference only). (2026-11-18)
-- **C5** This project's remote is the existing public repo
-  `https://github.com/OwenZZY/CJMZ_ZF` — the repository the paper cites as its
-  Python implementation. Its current content is replaced wholesale by this
-  project at the v0.1.0 release; nothing is pushed before then. The legacy tip
-  `93fbfdbe01f015723694eb059bd76fe11e7709a7` (`main`, 2026-11-18) is preserved
-  under a `legacy` tag before the first push. Remote is configured locally as
-  `origin`; no fetch or push has been performed. (2026-11-18)
+1. **One function for the outside.** Today the package exposes several names (`Graph`, `Arcs`,
+   `NicePathDecomposition`, `closure`, `zero_forcing_set`, `ZFResult`). You asked for a single
+   interface, so I would hide the helpers and leave just one function for you to call.
+   *Default: that function is `zero_forcing_set`; tell me what it should take in and give back.*
+2. **Where the decomposition comes from.** Today you supply a ready-made nice path decomposition
+   (the list of add/remove steps). Building one from a graph is a separate algorithm (pathwidth).
+   *Default: not part of this project unless you ask.*
+3. **More worked examples.** Name the graphs you want and I will work them through.
+   *Default: only when you ask.*
+4. **Show the guarantee directly.** The result already satisfies: size of the zero forcing set
+   ≤ (width + 1) × (number of forts). I can display this comparison more directly if it helps.
+   *Default: only when you ask.*
+5. **Keep the spec (`SPEC-v1.md`) and the report (`REPORT.md`) current** each round.
+6. **The numbering question** in §5, if you still see a problem.
 
-## Open decisions
+## 5. Open questions (answer in one line; if you skip, the default applies)
 
-- **D1** Canonical `fas(S, G)` tie-breaking rule — determines determinism and
-  whether the paper's $O(nm)$ claim survives implementation. (Stage 1.2)
-- **D2** Input scope: path decomposition given vs. also computed; which graph
-  classes are supported. (Stage 1.2)
-- **D3** Python floor and runtime dependency policy (stdlib-only core vs.
-  `networkx`). (Stage 1.5)
-- **D5** Dev environment and packaging: `pyproject.toml`, `src/` layout,
-  `.venv/` gitignored and never committed, `.gitignore` contents. (Stage 1.5 / 3)
+- **Just one function?** Should the package give you only one function to call from outside —
+  you pass in a graph and its decomposition, and it returns the zero forcing set, the forts, and
+  the arcs, all using your original vertex names — with every helper hidden inside?
+  *Default: yes; that one function is `zero_forcing_set`.*
+- **Add the left-out files to git?** Your v0 `SPEC.md`, the paper PDFs in `resources/`, and
+  `spec2` are not in the repository right now. Should I add them?
+  *Default: leave them out.*
+- **Any numbering mistake left?** I checked the add/remove step numbering and the +1/−1 signs
+  and found them correct. Do you still see a specific place where a number is off by one? If so,
+  tell me the file and line.
+  *Default: it is correct; nothing to change.*
 
-## Release plan for v0.1.0 (agreed; do not execute early)
+## 6. Owner comment area (please fill in — feedback / where to take off)
 
-Nothing is pushed before v0.1.0. Then, in this order:
+> _Answer any of these, or write free-form notes for me / the next chat:_
+>
+> - Where should the next chat begin?
+>   -
+> - What should the one outside function take as input, and give back?
+>   -
+> - Which graphs or examples do you want next?
+>   -
+> - Is anything in the "key math facts" (§2) wrong?
+>   -
+> - What is in scope / out of scope for next round?
+>   -
+> - Anything else:
+>   -
 
-1. `git fetch origin`
-2. `git tag legacy 93fbfdb && git push origin legacy` — preserve the old
-   implementation; if this fails, stop and do not continue.
-3. `git push --force origin main` — repo content becomes this project.
-4. On GitHub: confirm `main` is default; then README, release notes, citation.
+## 7. Pointers
 
-Push authentication is not configured in this session (`gh` CLI absent); Owen
-may need to supply credentials, or we switch `origin` to SSH before release.
-
-## Deferred to Stage 5
-
-LICENSE (type and copyright line); package/registry name; CI provider and
-badges; docs site; README wording; versioning scheme; Zenodo DOI / arXiv link
-in README.
-
-## Open questions for Owen
-
-- **Q2** (D2) May v1 require a path decomposition as input, i.e. ship no
-  pathwidth solver?
-- **Q3** (0.3) Beyond the three output guarantees (ZF set, fort packing,
-  ratio), which paper results should the release demonstrate empirically?
-- **Q4** (C5) Must the new implementation reproduce the *legacy* CJMZ_ZF
-  outputs exactly, or only the paper's guarantees? Black-box comparison against
-  the `legacy` tag is possible at Stage 4 if wanted.
-
-## Guards
-
-Why earlier attempts went wrong, and what we do instead:
-
-- "It runs" is not correctness → every output carries checkable certificates;
-  small cases are checked against an exact oracle.
-- Tie-breaking drift → the canonical forcing rule is fixed once in `SPEC.md` and
-  pinned by golden traces.
-- Spec as prose summary → `SPEC.md` must be implementable without the paper (C2).
-- Contamination → do not read the legacy CJMZ_ZF source during implementation;
-  it stays available in the `legacy` tag for black-box output comparison only
-  (Q4), not as a design reference.
-- Scope creep → pathwidth computation, treewidth and PSD variants are out of
-  scope unless a `D#` says otherwise.
-
-## Next action
-
-Draft step 0.1 (definitions and notation ledger) in chat for review; on approval
-write it to `docs/paper-notes.md`.
-
-## Changelog
-
-- 2026-11-18 created. Workspace inspected; paper read end-to-end; Stage 0
-  started. No other artifacts written yet.
-- 2026-11-18 installed official session-search bundle (restart pending);
-  step 0.1 definitions ledger drafted in chat for review. `HANDOFF.md` updated
-  in the same turn per protocol.
-- 2026-11-18 initialised the local git repository (no remote); first commit
-  holds `AGENTS.md`, `HANDOFF.md` and `.gitignore`. Step 0.1 still awaiting
-  sign-off.
-- 2026-11-18 repo decision: reuse `OwenZZY/CJMZ_ZF` (the repo the paper cites)
-  as the artifact's home, replaced at v0.1.0, old tip preserved as `legacy`.
-  `origin` configured; nothing fetched or pushed. D4 and D6 closed, C5 added.
+- Spec: `SPEC-v1.md` · definitions: `docs/definitions.md` · review: `docs/closure-review.md` ·
+  status: `REPORT.md`.
+- Examples: `examples.py` (`python3 examples.py`).
+- Prior work + tests: `zf-round2-backup.zip`.
+- Paper: `resources/paper/arXiv-2402.08866v1/` · Brimkov PDFs: `resources/brimkov*.pdf`.
