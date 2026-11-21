@@ -1,6 +1,12 @@
-# Report — zf-approx (round 5: 2026-11-21; rounds 1–4: 2026-11-20/21)
+# Report — zf-approx (round 9: 2026-11-21; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
 
-**What you need to read: nothing — no pending decisions.** Round 5: answered the sources-mask
+**What you need to read: nothing — no pending decisions.** Round 9 (2026-11-21): implemented
+the outside API per your answers (recorded in [HANDOFF.md](HANDOFF.md) §6) — one function
+`zf.zero_forcing_set(networkx graph, list of bags)`, a names-based result object, and a
+translation layer with forget-first nice-ification; the core is unchanged and everything is
+verified. Your API point 2 was identified (= HANDOFF §4.2: pathwidth construction out of
+scope unless asked); point 3 was not stated — fold it in whenever given.
+Round 5: answered the sources-mask
 question (viable; already implemented as `sources(vertices)`), added the C5 fort example
 (initial `[0]` → fort `[1,2,3,4]`) and a sources-mask demo to [examples.py](examples.py),
 audited the index/sign convention (correct; no `+0`/off-by-one), and **committed** the work.
@@ -13,13 +19,37 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
 
 ## 1. What needs to be done (by whom)
 
-- **Nothing required.** Round 2 (closure review + canon alignment) is complete and verified;
-  round 1 (SPEC Steps 1–3 + implementation) was already complete.
-- Optional, owner, before a public release: the name proposal in [SPEC-v1.md](SPEC-v1.md) §4
-  (unchanged from round 1; default: keep the names).
+- **Nothing required.** Round 9 (outside API) is complete and verified; rounds 1–5 were
+  already complete (rounds 6–8: see [HANDOFF.md](HANDOFF.md)).
+- Optional, owner: API point 3 (never stated — fold in whenever given); the name proposal in
+  [SPEC-v1.md](SPEC-v1.md) §4 before a public release (default: keep the names).
+- Out of scope unless you ask: building a path decomposition from a graph (pathwidth) —
+  your API point 2, default stands; more worked examples; displaying the guarantee.
 
 ## 2. What is done
 
+- **Round 9 (2026-11-21): outside API implemented (HANDOFF §8, frozen by your answers).**
+  One export: `zf.zero_forcing_set(graph, bags)` — `graph` a NetworkX graph (nodes = vertex
+  names), `bags` a list of sets of names forming a path decomposition (not necessarily nice).
+  Returns a frozen names-based `ZFResult` (`zf_set`, `forts`, `arcs` as name pairs). New
+  translation layer [zf/api.py](zf/api.py): NetworkX → internal `Graph` (sorted bijection
+  reused), bags → nice decomposition via `_to_nice` (forget-first, width-preserving), run the
+  unchanged core, translate back to names. The layer never imports networkx (reads
+  `.nodes`/`.edges`), so `import zf` stays stdlib-only. [zf/__init__.py](zf/__init__.py) now
+  exports only the one function (v0.2.0); [examples.py](examples.py) imports the internal
+  core from submodules (all 8 blocks still pass). Your answers (HANDOFF §6): names-based
+  result object; no suitability checking (trust, like the core); the layer must contain the
+  PD→nice-PD function; point 2 = HANDOFF §4.2 (pathwidth out of scope unless asked); point 3
+  not stated. Verification (throwaway script, deleted after use): 300 nice-input parity
+  trials (layer == core, arc-for-arc); 300 coarse-PD invariant trials, each also on a second
+  (order-based) PD shape when n ≥ 1 — S forces G via an independent simulator, forts
+  valid/disjoint, |F| ≤ Z(G) ≤ |S| ≤ (w+1)|F| with brute-force Z(G), arcs replay as a forcing
+  process from S, width preserved, 2n ops, determinism; explicit edge cases (empty graph,
+  single vertex, isolates, disconnected two-triangles with empty intermediate bags,
+  edgeless, empty/duplicate bags, star, coarse P5, K4, Petersen). Two early failures were
+  invalid test inputs (an uncovered isolated vertex in the generator; non-contiguous
+  triangle bags), not code bugs — fixed in the script. Core untouched. Docs: SPEC-v1 §7
+  added; two stale lines in §3 below corrected.
 - **Round 5 (2026-11-21): sources mask, cycle fort, index audit, commit.**
   (Item 3) Your diagnosis is right: the [L6c] full-graph closure gives correct derived colors and
   correct arcs inside the region, but `sources()` over all vertices spuriously includes the blued
@@ -130,13 +160,37 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
   blue = `(V \ X_t^z) ∪ X_t ∪ X_z`. Exact because contiguity (D2) forces every inside-neighbor of an
   outside vertex into `X_t ∪ X_z` (blue), so outside vertices never force. Used at (L3b), (L6c), (L7a).
 - Index convention: `len(ops) = 2n`, bags `X_0..X_{2n}`, `k = 2n−1`, op `z−1` (0-based) produces `X_z`.
-- Input suitability = D1–D4 + every vertex in some bag (checked by `validate`); this is weaker than
-  the paper's connectedness assumption, so edgeless/disconnected graphs also work.
-- Canonical forcing order: deterministic FIFO queue seeded in index order (a canonical choice in
-  the sense of tex:L621); the whole algorithm is deterministic.
+- Input suitability = D1–D4 + every vertex in some bag (the caller's responsibility; the lean
+  core does not check it — round-3 ruling); this is weaker than the paper's connectedness
+  assumption, so edgeless/disconnected graphs also work.
+- **Outside API (decided 2026-11-21, owner; implemented round 9):** one public function
+  `zf.zero_forcing_set(graph, bags)` (NetworkX graph + list of bags, not necessarily nice);
+  frozen names-based result (`zf_set`, `forts`, `arcs`); the translation layer trusts
+  suitable inputs (no validation) and contains the PD→nice-PD function (`_to_nice`,
+  forget-first, width-preserving). Building a decomposition from a graph (pathwidth) is out
+  of scope unless asked (owner API point 2 = HANDOFF §4.2). Point 3 not stated. Contract:
+  [SPEC-v1.md](SPEC-v1.md) §7; answers: [HANDOFF.md](HANDOFF.md) §6.
+- The whole algorithm is deterministic (the forcing-order canon is the min-index ruling
+  above; the round-1 FIFO queue was superseded in round 2).
 
 ## 4. Agent findings (informational — no need to read unless auditing)
 
+- **Round 9: forget-first nice-ification is forced, not a preference.** Introducing before
+  forgetting can inflate an intermediate bag to |X_i ∪ X_{i+1}| (e.g. {a,b}→{c,d} at width 1
+  would pass through a 3-vertex bag); forgetting first keeps every intermediate bag a subset
+  of one input bag, preserving width (Bodlaender–Kloks 1994, Lemma 13.1.3, tex:L580–581).
+  Recorded as the convention in [SPEC-v1.md](SPEC-v1.md) §7.3.
+- **Round 9: the trivial fort V is paper-faithful.** The loop evaluates W at z=k+1
+  (tex:L639–642); with t=0, W = white(∅, G) = V, so V is added as a fort and the final
+  A.reverse() flips the last chain (traced on P3: S={0}, arcs 0→1→2, F={V}). Hence every run
+  on n≥1 returns at least one fort. SPEC-v1 §2/§7.4 updated.
+- **Round 9: disconnected inputs can force empty intermediate bags.** Consecutive bags with
+  empty intersection (possible only when disconnected) pass through ∅ under width-preserving
+  nice-ification; the core replays ops without D3 checks and handles it correctly (verified:
+  two-triangles, edgeless, isolate cases + random disconnected trials).
+- **Round 9: the layer never imports networkx.** It reads graph.nodes/graph.edges (trusted,
+  duck-typed), so `import zf` is stdlib-only; networkx is needed only to construct inputs
+  (verified with the system python3, which has no networkx).
 - **v0 typo 1 ([L6c] blue set).** v0 wrote `V \ V(G(t,z)) ∪ X_t^z`, which literally is all of `V`
   (since `X_t^z = V(G(t,z))`) and would make `W = ∅` always. Resolved to `(V \ X_t^z) ∪ X_t ∪ X_z`,
   forced by consistency with (L3b). Recorded in [SPEC-v1.md](SPEC-v1.md) §6.1.

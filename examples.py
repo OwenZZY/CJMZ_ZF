@@ -1,12 +1,20 @@
 """Explicit worked examples.  Run:  python3 examples.py
 
+These examples exercise the INTERNAL core directly (submodule imports);
+the single outside interface is zf.zero_forcing_set (networkx graph +
+list of bags; see SPEC-v1.md section 7).
+
 Graphs are built with external names; the core works on 0-based indices
 internally; results are translated back to names with Graph.to_names and
 Graph.arcs_to_names.  "Derived coloring" = the final BLUE set after forcing
 to fixation (closure); its complement is the white set.
 """
 
-from zf import Arcs, Graph, NicePathDecomposition, closure, zero_forcing_set
+from zf.arcs import Arcs
+from zf.graph import Graph
+from zf.decomposition import NicePathDecomposition
+from zf.closure import closure
+from zf.algorithm import zero_forcing_set
 
 
 def is_fort(graph, fort):

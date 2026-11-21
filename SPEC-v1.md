@@ -9,11 +9,18 @@ the mathematical definitions live in `docs/definitions.md`, one item per line (S
 §3 aligns v0 with the paper and assesses viability (Step 3). §4 is the name proposal (Step 3.1).
 §5 is the complete structure: file layout, exact interfaces, and the main loop with its tricks
 (Step 3.2). §6 lists issues found in v0 and how they were resolved — no open questions remain.
+**§7 is the outside API (round 9): the single public function, the translation layer, and the
+nice-ification convention — the only section an outside caller needs.**
 
 **Round 3 (2026-11-21), owner ruling.** The core is lean and internal: inputs are assumed
 suitable, and `zf/` contains no validation, no try/except, and no raised exceptions. The
 round-2 state (defensive core, tests, examples, README) is preserved verbatim in
 `zf-round2-backup.zip`.
+
+**Round 9 (2026-11-21), owner ruling.** The outside API is frozen and implemented (§7): one
+public function `zero_forcing_set(graph, bags)` (NetworkX graph + list of bags), a names-based
+result object, and a translation layer that trusts suitable inputs and makes the decomposition
+nice. The internal core (§5) is unchanged.
 
 ---
 
@@ -59,7 +66,9 @@ Facts from the paper that the implementation relies on (statements only, no proo
 
 - The while loop exits either at `z = k+1` with `W = ∅` (finished), or at the first `z` with
   `W ≠ ∅`; in the latter case `X_z ⊂ X_{z-1}` (a forget step), hence `G(t,z) = G(t,z-1)`
-  (tex:L668–682, Lemma "s").
+  (tex:L668–682, Lemma "s"). The `W ≠ ∅` case can occur at `z = k+1` itself: if no fort was
+  found earlier (`t = 0`), then `W = white(∅, G) = V` and the trivial fort `V` is added —
+  paper-faithful; see §7.4.
 - (L6d) only ever removes arcs whose head lies in `X_t ∩ X_z`; after it, every vertex of `X_z`
   is a source of `A` (tex:L683).
 - `S` need not be maintained: (L5) and (L6b) may be omitted and `S` computed once at the end as
@@ -107,12 +116,13 @@ Public GitHub release; repo `zf-approx`, package `zf` (as in the v0 title). Stdl
 ### 5.1 File layout
 
 ```
-zf/__init__.py        # exports: Graph, Arcs, NicePathDecomposition, closure, zero_forcing_set, ZFResult
-zf/graph.py           # Graph
-zf/arcs.py            # Arcs
-zf/decomposition.py   # NicePathDecomposition
-zf/closure.py         # closure
-zf/algorithm.py       # zero_forcing_set, ZFResult
+zf/__init__.py        # exports ONLY zero_forcing_set (the outside API, from zf/api.py)
+zf/api.py             # outside API: zero_forcing_set(graph, bags), ZFResult (names), _to_nice
+zf/graph.py           # Graph                      (internal)
+zf/arcs.py            # Arcs                       (internal)
+zf/decomposition.py   # NicePathDecomposition      (internal)
+zf/closure.py         # closure                    (internal)
+zf/algorithm.py       # zero_forcing_set, ZFResult (internal, index-based)
 ```
 
 ### 5.2 Interfaces (shared API — fixed)
@@ -297,3 +307,82 @@ L8  return ZFResult(tuple(A.sources()), tuple(forts), A)   # L5 once, at the end
    index, giving arc-for-arc parity with the parallel project (verified 960/960 trials). The
    white set and fort packing are canon-independent; only the arcs and hence `S` can depend on it.
    Review and evidence: `docs/closure-review.md`.
+
+---
+
+## 7. Outside API (round 9, 2026-11-21 — frozen by owner, implemented)
+
+The only section an outside caller needs. The internal core (§5) is unchanged.
+
+### 7.1 The single function
+
+**`zf.zero_forcing_set(graph, bags)`** — the only package export (`__all__`).
+
+- `graph`: a `networkx.Graph` — simple, undirected; its nodes are the vertex names
+  (distinct, sortable; isolated vertices included).
+- `bags`: a list of sets of vertex names forming a path decomposition of `graph`:
+  (D1) every edge has both endpoints in some bag; (D2) each vertex's bags are contiguous;
+  every vertex lies in some bag. The bags need **not** be nice.
+- Suitability is the caller's responsibility (owner ruling, 2026-11-21): the layer trusts
+  suitable inputs exactly as the core does; nothing is validated.
+- Returns a frozen **`ZFResult`** (defined in `zf/api.py`) in the **original names**:
+  - `zf_set: tuple` of names, sorted — a zero forcing set `S`;
+  - `forts: tuple[frozenset]` of names — the fort packing `F`, in discovery order;
+  - `arcs: tuple` of `(name, name)` pairs, sorted by tail — the final forcing arc set `A`;
+    its sources are exactly `zf_set`.
+- Guarantee: `|S| ≤ (w + 1)·|F|` with `w = max|bag| − 1` of the given bags.
+
+```python
+import networkx as nx
+import zf
+
+G = nx.path_graph(["a", "b", "c"])
+r = zf.zero_forcing_set(G, [{"a", "b"}, {"b", "c"}])   # bags need not be nice
+r.zf_set    # ('a',)
+r.forts     # (frozenset({'a', 'b', 'c'}),)  — see §7.4 on the trivial fort
+r.arcs      # (('a', 'b'), ('b', 'c'))
+```
+
+### 7.2 Translation layer (`zf/api.py`)
+
+The only place that touches external formats. Steps:
+1. `Graph(graph.nodes, graph.edges)` — reuses the core's sorted name↔index bijection.
+   The layer **never imports networkx** (it reads `.nodes`/`.edges`, trusted): `import zf`
+   stays standard-library-only; networkx is needed only to construct inputs.
+2. Bags → index sets → `_to_nice(bags, n)` → `NicePathDecomposition` (§7.3).
+3. Run the unchanged core `zf.algorithm.zero_forcing_set`.
+4. Translate the index result back to names via `Graph.to_names` / `Graph.arcs_to_names`.
+
+### 7.3 Nice-ification convention (`_to_nice`)
+
+- Drop empty bags and consecutive duplicates; empty end bags are implicit (the op sequence
+  starts from `∅` and ends at `∅`).
+- Between consecutive bags `X_i, X_{i+1}`: **forget** the vertices of `X_i \ X_{i+1}` in
+  increasing index order, **then introduce** the vertices of `X_{i+1} \ X_i` in increasing
+  index order.
+- Forget-first is forced by width preservation: intermediate bags stay subsets of `X_i`
+  (during forgets) or of `X_{i+1}` (during introduces); introduce-first could inflate a bag
+  to `|X_i ∪ X_{i+1}|`. Every input bag appears verbatim in the nice sequence, so D1/D2 and
+  the width are preserved; each vertex is introduced once and forgotten once (`2n` ops,
+  `k = 2n−1`).
+- Empty intersections: for disconnected graphs, consecutive bags may be disjoint; the
+  width-preserving sequence then passes through an empty intermediate bag (D3 relaxed).
+  The core replays ops without D3 checks; verified correct (round-9 trials including
+  disconnected and edgeless graphs).
+- This is the paper's cited transformation: Bodlaender–Kloks 1994, Lemma 13.1.3
+  (tex:L580–581): width preserved, `O(n)` time, at most `4n` bags.
+- Deterministic: sorted order at every transition. Nice-ification of already-nice bags is
+  the identity (verified: layer == core, arc-for-arc, on nice inputs).
+- The nice-ified decomposition need not equal a hand-made one; `S`, forts, and arcs can
+  differ between valid decompositions — the guarantee holds for all of them.
+
+### 7.4 Recorded behavior notes (round 9)
+
+- The loop evaluates `W` at `z = k+1` (tex:L639–642). If no fort was found earlier (`t = 0`),
+  then `W = white(∅, G) = V`, so the trivial fort `V` is added and the final `A.reverse()`
+  flips the last chain — paper-faithful (traced against the algorithm box). Hence for
+  `n ≥ 1` every run returns at least one fort.
+- API provenance (HANDOFF §6/§8): owner point 1 = the shape (round 8); point 2 =
+  decomposition provenance (HANDOFF §4.2) — building a decomposition from a graph
+  (pathwidth) is **out of scope unless asked**: the caller supplies bags, the layer makes
+  them nice. Point 3: not stated; fold in when given.
