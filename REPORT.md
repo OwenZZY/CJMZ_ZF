@@ -1,6 +1,10 @@
-# Report — zf-approx (round 9: 2026-11-21; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
+# Report — zf-approx (round 10: 2026-11-23; round 9: 2026-11-21; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
 
-**What you need to read: nothing — no pending decisions.** Round 9 (2026-11-21): implemented
+**What you need to read: nothing — no pending decisions.** Round 10 (2026-11-23): the requested
+visual demonstration — [docs/pipeline-demo.html](docs/pipeline-demo.html), a self-contained
+figure of the whole one-way procedure (input → translation layer → core loop → names-based
+result), every state traced from the shipped code. Open it in a browser.
+Round 9 (2026-11-21): implemented
 the outside API per your answers (recorded in [HANDOFF.md](HANDOFF.md) §6) — one function
 `zf.zero_forcing_set(networkx graph, list of bags)`, a names-based result object, and a
 translation layer with forget-first nice-ification; the core is unchanged and everything is
@@ -28,6 +32,20 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
 
 ## 2. What is done
 
+- **Round 10 (2026-11-23): visual pipeline demonstration (owner request).**
+  [docs/pipeline-demo.html](docs/pipeline-demo.html) — self-contained HTML + inline SVG, no
+  dependencies, opens in any browser. §0: the whole pipeline in one figure (names → indices →
+  names, trust boundary marked). §§1–4: the house graph (square 1-2-3-4-1 + roof 5, coarse
+  width-2 bags) walked through every stage: the sorted bijection and the internal objects;
+  `_to_nice` forget-first nicification shown as bag timelines; the L1–L8 loop step by step
+  (all [L3] skips, four closure calls with the [L6c] coloring drawn — solid blue = region,
+  pale blue = outside assumed blue); the fort {1,2,3,4} found at z=9; the L6 arc build with
+  the min-index forcing sequence; the final `A.reverse()` drawn before/after; the output
+  ZFResult in names with the guarantee 2 ≤ (2+1)·1 and the live out_arcs/in_arcs arrays.
+  §5: three more inputs (C5, disconnected two-triangles with empty intermediate bags, two
+  isolates). §6: file map. Every state was produced by running the shipped code at 88d1196
+  and cross-checked arc-for-arc against `zf.zero_forcing_set`; the trace/generator scripts
+  were deleted after use. No code change.
 - **Round 9 (2026-11-21): outside API implemented (HANDOFF §8, frozen by your answers).**
   One export: `zf.zero_forcing_set(graph, bags)` — `graph` a NetworkX graph (nodes = vertex
   names), `bags` a list of sets of names forming a path decomposition (not necessarily nice).

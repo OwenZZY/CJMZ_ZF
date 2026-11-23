@@ -21,7 +21,7 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   guide at the top, plain self-contained items, no verification busywork. The owner is the
   paper's author — never ask him to confirm facts from his own paper; resolve and record them.
 
-## 2. Current status (rounds 1–5 and 9, 2026-11-20/21)
+## 2. Current status (rounds 1–5, 9, 10; 2026-11-20/23)
 
 **Done and verified:**
 - Lean core `zf/` (core ~370 lines, 6 modules; round 9 adds the 98-line `api.py` layer),
@@ -48,6 +48,9 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   exports only `zero_forcing_set`. Frozen contract and conventions: §8. Verified by throwaway
   script (deleted after use): nice-input parity with the core, brute-force invariants on random
   graphs incl. disconnected/edgeless, width preservation, determinism.
+- Round 10 (2026-11-23): **visual demonstration** (owner request) — `docs/pipeline-demo.html`:
+  the one-way pipeline as a figure (input → layer → loop → names-based result), all states
+  traced from the shipped code; house-graph walkthrough + C5/disconnected/isolate cards.
 - Docs: `SPEC-v1.md` (living spec, lean contract), `docs/definitions.md` (all math definitions,
   one per line), `docs/closure-review.md` (B-F-H comparison), `REPORT.md` (rounds 1–5, 9).
 - Backup: `zf-round2-backup.zip` = round-2 defensive core + 112-test suite + examples + README,
@@ -148,6 +151,8 @@ Item 6 closed (numbering correct).
 
 ## 7. Pointers
 
+- **Visual demo (round 10): `docs/pipeline-demo.html`** — the whole one-way procedure as a
+  figure, traced from the shipped code; open in a browser.
 - Spec: `SPEC-v1.md` · definitions: `docs/definitions.md` · review: `docs/closure-review.md` ·
   status: `REPORT.md`.
 - Examples: `examples.py` (`python3 examples.py`).

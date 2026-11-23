@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>zf-approx — the one-way pipeline, end to end</title>
+<style>
+:root { --ink:#0f172a; --mut:#64748b; --line:#e2e8f0; --bg:#f8fafc;
+        --blue:#2563eb; --pale:#bfdbfe; --amber:#f59e0b; --green:#059669; --red:#dc2626; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+       font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif; }
+.wrap { max-width:1020px; margin:0 auto; padding:28px 22px 70px; }
+h1 { font-size:26px; margin:0 0 4px; }
+h2 { font-size:20px; margin:44px 0 10px; padding-top:14px; border-top:2px solid var(--line); }
+h3 { font-size:16px; margin:22px 0 8px; }
+.sub { color:var(--mut); margin:0 0 18px; }
+.guide { background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 16px; margin:16px 0; }
+.card { background:#fff; border:1px solid var(--line); border-radius:12px; padding:16px 18px; margin:14px 0;
+        box-shadow:0 1px 2px rgba(15,23,42,.04); }
+.row { display:flex; flex-wrap:wrap; gap:14px; align-items:flex-start; }
+.col { flex:1 1 300px; min-width:280px; }
+table { border-collapse:collapse; font-size:13.5px; }
+th,td { border:1px solid var(--line); padding:5px 9px; text-align:left; }
+th { background:#f1f5f9; }
+code, .mono { font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:13px; }
+code { background:#f1f5f9; border-radius:4px; padding:1px 5px; }
+.chip { display:inline-flex; align-items:center; gap:5px; background:#fff; border:1.5px solid #cbd5e1;
+        border-radius:999px; padding:4px 11px; margin:3px 2px; font-weight:600; font-size:13.5px; white-space:nowrap; }
+.chip.empty { color:var(--mut); border-style:dashed; font-weight:400; }
+.dot { width:11px; height:11px; border-radius:50%; display:inline-block; flex:0 0 auto; }
+.op { display:inline-block; font-size:12px; font-weight:700; border-radius:6px; padding:2px 6px; margin:0 1px;
+      vertical-align:middle; }
+.op.add { background:#dcfce7; color:#166534; }
+.op.del { background:#fee2e2; color:#991b1b; }
+.badge { display:inline-block; font-size:11.5px; font-weight:700; border-radius:6px; padding:2px 7px; }
+.badge.skip { background:#f1f5f9; color:#475569; }
+.badge.clo { background:#ede9fe; color:#5b21b6; }
+.badge.fort { background:#fef3c7; color:#92400e; }
+.badge.trick { background:#dbeafe; color:#1e40af; }
+.timeline { display:flex; flex-wrap:wrap; align-items:center; gap:2px; margin:8px 0; }
+.note { color:var(--mut); font-size:13.5px; }
+.kpi { display:inline-block; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534;
+       border-radius:10px; padding:8px 14px; font-weight:600; margin:6px 8px 0 0; }
+.legend span { display:inline-flex; align-items:center; gap:6px; margin:0 14px 6px 0; font-size:13px; }
+.sw { width:16px; height:16px; border-radius:50%; display:inline-block; }
+figure { margin:10px 0; text-align:center; }
+figcaption { font-size:12.5px; color:var(--mut); margin-top:4px; }
+.arrowflow { text-align:center; font-size:22px; color:var(--mut); margin:2px 0; }
+.small { font-size:13px; }
+details { margin:8px 0; }
+summary { cursor:pointer; font-weight:600; color:#1e40af; }
+.footer { margin-top:46px; color:var(--mut); font-size:13px; border-top:2px solid var(--line); padding-top:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>zf-approx: what goes in, what gets processed</h1>
+<p class="sub">The whole repo is one one-way procedure: <b>names → indices → names</b>.
+This page walks one example through every stage. All states below were produced by running the
+shipped code (commit <code>88d1196</code>) — nothing is drawn by hand.</p>
+
+<div class="guide"><b>Reading guide.</b> §0 is the entire pipeline in one figure.
+§§1–4 walk the house graph through it (input → translation → loop → output).
+§5 shows three more inputs (C5, disconnected, isolates). §6 maps the files.
+Skim §0 and §4 for the shape; read §§2–3 for the machinery.</div>
+
+<h2>0 · The pipeline in one figure</h2>
+<div class="card"><svg viewBox="0 0 980 330" width="980" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-p" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#334155"/></marker></defs><rect x="20" y="40" width="210" height="120" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1.5"/><text x="125.0" y="64" text-anchor="middle" font-weight="700" font-size="14">INPUT (outside)</text><text x="125.0" y="86" text-anchor="middle" font-size="11.5" fill="#475569">networkx.Graph — nodes = names</text><text x="125.0" y="103" text-anchor="middle" font-size="11.5" fill="#475569">bags: list of sets of names</text><text x="125.0" y="120" text-anchor="middle" font-size="11.5" fill="#475569">(a path decomposition,</text><text x="125.0" y="137" text-anchor="middle" font-size="11.5" fill="#475569">not necessarily nice)</text><rect x="290" y="40" width="230" height="120" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5"/><text x="405.0" y="64" text-anchor="middle" font-weight="700" font-size="14">TRANSLATION LAYER</text><text x="405.0" y="86" text-anchor="middle" font-size="11.5" fill="#475569">zf/api.py</text><text x="405.0" y="103" text-anchor="middle" font-size="11.5" fill="#475569">sorted bijection names ↔ 0..n−1</text><text x="405.0" y="120" text-anchor="middle" font-size="11.5" fill="#475569">_to_nice: forget-first,</text><text x="405.0" y="137" text-anchor="middle" font-size="11.5" fill="#475569">width-preserving nicification</text><rect x="580" y="40" width="230" height="120" rx="10" fill="#faf5ff" stroke="#d8b4fe" stroke-width="1.5"/><text x="695.0" y="64" text-anchor="middle" font-weight="700" font-size="14">LEAN CORE (internal)</text><text x="695.0" y="86" text-anchor="middle" font-size="11.5" fill="#475569">zf/algorithm.py — loop L1–L8</text><text x="695.0" y="103" text-anchor="middle" font-size="11.5" fill="#475569">tricks [L3] [L6b] [L6c]</text><text x="695.0" y="120" text-anchor="middle" font-size="11.5" fill="#475569">zf/closure.py — B-F-H engine</text><text x="695.0" y="137" text-anchor="middle" font-size="11.5" fill="#475569">min-index canon; trusts inputs</text><rect x="290" y="220" width="230" height="86" rx="10" fill="#fffbeb" stroke="#fcd34d" stroke-width="1.5"/><text x="405.0" y="244" text-anchor="middle" font-weight="700" font-size="14">RESULT (outside)</text><text x="405.0" y="266" text-anchor="middle" font-size="11.5" fill="#475569">ZFResult in original names:</text><text x="405.0" y="283" text-anchor="middle" font-size="11.5" fill="#475569">zf_set · forts · arcs</text><line x1="230" y1="100" x2="288" y2="100" stroke="#334155" stroke-width="2" marker-end="url(#ah-p)"/><text x="259" y="90" text-anchor="middle" font-size="11" fill="#64748b">names</text><line x1="520" y1="100" x2="578" y2="100" stroke="#334155" stroke-width="2" marker-end="url(#ah-p)"/><text x="549" y="90" text-anchor="middle" font-size="11" fill="#64748b">indices</text><path d="M695,160 L695,263 L522,263" fill="none" stroke="#334155" stroke-width="2" marker-end="url(#ah-p)"/><text x="705" y="215" font-size="11" fill="#64748b">ZFResult (indices)</text><text x="610" y="253" text-anchor="middle" font-size="11" fill="#64748b">back through the layer: to_names / arcs_to_names</text><rect x="10" y="20" width="810" height="150" rx="14" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="6 4"/><text x="24" y="185" font-size="11.5" fill="#92400e">trust boundary: suitability (D1/D2 + every vertex in a bag) is the caller’s responsibility — nothing is validated</text><text x="840" y="100" font-size="12" fill="#64748b">one-way:</text><text x="840" y="118" font-size="12" fill="#64748b">names → indices</text><text x="840" y="136" font-size="12" fill="#64748b">→ names</text></svg></div>
+<p class="note">One function is the only export: <code>zf.zero_forcing_set(graph, bags)</code>.
+The translation layer is the only place that touches external formats; the core never sees a
+name, and the outside never sees an index. The core is unchanged from rounds 1–5.</p>
+
+<h2>1 · What goes in</h2>
+<div class="card row">
+<div class="col">
+<h3 style="margin-top:0">The graph (NetworkX, nodes = names)</h3>
+<svg viewBox="0 0 420 290" width="420" height="290" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-in" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="150" y1="235" x2="150" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="270" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="235" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><circle cx="150" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">1</text><circle cx="150" cy="120" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">2</text><circle cx="270" cy="120" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">3</text><circle cx="270" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text><circle cx="210" cy="42" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="210" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">5</text></svg>
+<p class="small">The <b>house</b>: square 1-2-3-4-1 plus roof vertex 5 joined to 2 and 3.
+Edges: <code>[[1, 2], [1, 4], [2, 3], [2, 5], [3, 4], [3, 5]]</code>.</p>
+</div>
+<div class="col">
+<h3 style="margin-top:0">The bags (a path decomposition — not nice)</h3>
+<span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#3b82f6"></span>{1, 4}</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#10b981"></span><span class="dot" style="background:#3b82f6"></span>{1, 3, 4}</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span>{1, 2, 3}</span><span class="chip"><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span><span class="dot" style="background:#8b5cf6"></span>{2, 3, 5}</span>
+<p class="small">Width = max|bag| − 1 = <b>2</b>. Every edge lies in some bag (D1);
+each vertex’s bags are contiguous (D2); every vertex appears. That is the whole contract —
+<b>suitability is the caller’s responsibility</b>; nothing is validated (your ruling).</p>
+<p class="small">Two bag-to-bag changes move <b>two</b> vertices
+({1,3,4}→{1,2,3} and {1,2,3}→{2,3,5}), so this is <b>not</b> a nice decomposition.
+The layer must fix that.</p>
+</div>
+</div>
+
+<h2>2 · Translation layer — names to indices, bags to ops</h2>
+<div class="card row">
+<div class="col">
+<h3 style="margin-top:0">Step A · the sorted bijection (reused from the core’s Graph)</h3>
+<table><tr><th>name</th><th>index</th></tr><tr><td>1</td><td>0</td></tr><tr><td>2</td><td>1</td></tr><tr><td>3</td><td>2</td></tr><tr><td>4</td><td>3</td></tr><tr><td>5</td><td>4</td></tr></table>
+<p class="note">Names are sorted; index i ↔ names[i]. From here on, everything is 0-based.</p>
+<h3>The internal objects the core receives</h3>
+<p class="small mono">Graph: n=5, edges = (0,1), (0,3), (1,2), (1,4), (2,3), (2,4)<br>adj = 0: [1, 3]; 1: [0, 2, 4]; 2: [1, 3, 4]; 3: [0, 2]; 4: [1, 2]</p>
+<p class="small mono">NicePathDecomposition: ops of length 2n = 10, k = 9, width = 2</p>
+</div>
+<div class="col">
+<h3 style="margin-top:0">Step B · _to_nice — forget-first, width-preserving</h3>
+<p class="small">The input bags, with the single-vertex steps the layer inserts
+(∅ ends padded; empty/duplicate bags dropped):</p>
+<div class="timeline"><span class="chip empty">∅</span><span class="op add">+1</span><span class="op add">+4</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#3b82f6"></span>{1, 4}</span><span class="op add">+3</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#10b981"></span><span class="dot" style="background:#3b82f6"></span>{1, 3, 4}</span><span class="op del">−4</span><span class="op add">+2</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span>{1, 2, 3}</span><span class="op del">−1</span><span class="op add">+5</span><span class="chip"><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span><span class="dot" style="background:#8b5cf6"></span>{2, 3, 5}</span><span class="op del">−2</span><span class="op del">−3</span><span class="op del">−5</span><span class="chip empty">∅</span></div>
+<p class="small">The resulting <b>nice</b> bag sequence (each step adds or removes exactly one
+vertex; every input bag appears verbatim, so D1/D2 and the width survive):</p>
+<div class="timeline"><span class="chip empty">∅</span><span class="op add">+1</span><span class="chip"><span class="dot" style="background:#ef4444"></span>{0}</span><span class="op add">+4</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#10b981"></span>{0, 3}</span><span class="op add">+3</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span>{0, 2, 3}</span><span class="op del">−4</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span>{0, 2}</span><span class="op add">+2</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span>{0, 1, 2}</span><span class="op del">−1</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span>{1, 2}</span><span class="op add">+5</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#3b82f6"></span>{1, 2, 4}</span><span class="op del">−2</span><span class="chip"><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#3b82f6"></span>{2, 4}</span><span class="op del">−3</span><span class="chip"><span class="dot" style="background:#3b82f6"></span>{4}</span><span class="op del">−5</span><span class="chip empty">∅</span></div>
+<p class="note">Why forget-first: intermediate bags stay subsets of the old bag (during forgets)
+or the new bag (during introduces) — width preserved. Introduce-first could inflate a bag to
+|X_i ∪ X_{i+1}|. This is the paper’s cited transformation (Bodlaender–Kloks, Lemma 13.1.3).
+Consecutive bags with empty intersection (disconnected graphs) pass through ∅ — see §5.</p>
+</div>
+</div>
+
+<h2>3 · The core — loop L1–L8 with the three tricks</h2>
+<div class="card">
+<div class="legend">
+<span><span class="sw" style="background:#2563eb"></span>blue in the region (X_t ∪ X_z)</span>
+<span><span class="sw" style="background:#bfdbfe;border:1.5px dashed #2563eb"></span>outside, assumed blue — trick [L6c]</span>
+<span><span class="sw" style="background:#fff;border:2px solid #334155"></span>white</span>
+<span><span class="sw" style="background:#fff;border:3px solid #f59e0b"></span>fort (white at fixation)</span>
+</div>
+<p class="small">The loop scans z forward from t. <b>[L3]</b> introduce steps — and forgets of
+vertices already in X_t — keep W = ∅, so they <b>skip closure entirely</b>. Closure runs on the
+<b>full graph</b> with every outside vertex assumed blue <b>[L6c]</b>; no induced subgraph is
+ever built. S is never maintained <b>[L6b]</b> — it is read off the arcs once, at the end.</p>
+</div>
+
+<h3>Outer iteration 1 — t = 0, X_t = ∅</h3>
+<div class="card">
+<table style="width:100%">
+<tr><th>z</th><th>step</th><th>action</th><th>blue given to closure</th><th>W (white at fixation)</th></tr>
+<tr><td>1</td><td class='mono'>+1</td><td><span class="badge skip">[L3] skip — introduce</span></td><td class='mono'>—</td><td class='mono'>—</td></tr><tr><td>2</td><td class='mono'>+4</td><td><span class="badge skip">[L3] skip — introduce</span></td><td class='mono'>—</td><td class='mono'>—</td></tr><tr><td>3</td><td class='mono'>+3</td><td><span class="badge skip">[L3] skip — introduce</span></td><td class='mono'>—</td><td class='mono'>—</td></tr><tr><td>4</td><td class='mono'>−4</td><td><span class="badge clo">closure</span></td><td class='mono'>{1, 2, 3, 5}</td><td class='mono'>∅</td></tr><tr><td>5</td><td class='mono'>+2</td><td><span class="badge skip">[L3] skip — introduce</span></td><td class='mono'>—</td><td class='mono'>—</td></tr><tr><td>6</td><td class='mono'>−1</td><td><span class="badge clo">closure</span></td><td class='mono'>{2, 3, 5}</td><td class='mono'>∅</td></tr><tr><td>7</td><td class='mono'>+5</td><td><span class="badge skip">[L3] skip — introduce</span></td><td class='mono'>—</td><td class='mono'>—</td></tr><tr><td>8</td><td class='mono'>−2</td><td><span class="badge clo">closure</span></td><td class='mono'>{3, 5}</td><td class='mono'>∅</td></tr><tr><td>9</td><td class='mono'>−3</td><td><span class="badge clo">closure</span></td><td class='mono'>{5}</td><td class='mono'>{1, 2, 3, 4} <span class="badge fort">fort!</span></td></tr>
+</table>
+<p class="note">Four closure calls (z = 4, 6, 8, 9); five steps skipped by [L3]. At z = 9 the
+bag is {5}: vertex 5 has two white neighbours (2 and 3), nobody can force — the white set
+{1,2,3,4} is a <b>fort</b> (outside vertex 5 touches it twice, not once).</p>
+<div class="row"><figure><svg viewBox="0 0 250 180" width="250" height="180" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-s4" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="150" y1="235" x2="150" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="270" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="235" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><circle cx="150" cy="235" r="17" fill="#2563eb" stroke="#1e3a8a" stroke-width="2"/><text x="150" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="inherit">1</text><circle cx="150" cy="120" r="17" fill="#bfdbfe" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 3"/><text x="150" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#1e3a8a" font-family="inherit">2</text><circle cx="270" cy="120" r="17" fill="#2563eb" stroke="#1e3a8a" stroke-width="2"/><text x="270" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="inherit">3</text><circle cx="270" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text><circle cx="210" cy="42" r="17" fill="#bfdbfe" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 3"/><text x="210" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="#1e3a8a" font-family="inherit">5</text></svg><figcaption>z=4: forget 4 · blue = {1, 2, 3, 5} → W = ∅</figcaption></figure><figure><svg viewBox="0 0 250 180" width="250" height="180" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-s6" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="150" y1="235" x2="150" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="270" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="235" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><circle cx="150" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">1</text><circle cx="150" cy="120" r="17" fill="#2563eb" stroke="#1e3a8a" stroke-width="2"/><text x="150" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="inherit">2</text><circle cx="270" cy="120" r="17" fill="#2563eb" stroke="#1e3a8a" stroke-width="2"/><text x="270" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="inherit">3</text><circle cx="270" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text><circle cx="210" cy="42" r="17" fill="#bfdbfe" stroke="#2563eb" stroke-width="2" stroke-dasharray="4 3"/><text x="210" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="#1e3a8a" font-family="inherit">5</text></svg><figcaption>z=6: forget 1 · blue = {2, 3, 5} → W = ∅</figcaption></figure><figure><svg viewBox="0 0 250 180" width="250" height="180" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-s8" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="150" y1="235" x2="150" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="270" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="235" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><circle cx="150" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">1</text><circle cx="150" cy="120" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">2</text><circle cx="270" cy="120" r="17" fill="#2563eb" stroke="#1e3a8a" stroke-width="2"/><text x="270" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="inherit">3</text><circle cx="270" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text><circle cx="210" cy="42" r="17" fill="#2563eb" stroke="#1e3a8a" stroke-width="2"/><text x="210" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="inherit">5</text></svg><figcaption>z=8: forget 2 · blue = {3, 5} → W = ∅</figcaption></figure><figure><svg viewBox="0 0 250 180" width="250" height="180" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-s9" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="150" y1="235" x2="150" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="270" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="235" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><circle cx="150" cy="235" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="150" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">1</text><circle cx="150" cy="120" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="150" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">2</text><circle cx="270" cy="120" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="270" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">3</text><circle cx="270" cy="235" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="270" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text><circle cx="210" cy="42" r="17" fill="#2563eb" stroke="#1e3a8a" stroke-width="2"/><text x="210" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="#fff" font-family="inherit">5</text></svg><figcaption>z=9: forget 3 · blue = {5} → W = {1, 2, 3, 4}</figcaption></figure></div>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">L6 — collect the fort, build the arc set</h3>
+<p class="small"><b>L6a:</b> F ← F ∪ {1,2,3,4}.
+<b>L6c:</b> run closure again from X_t ∪ X_{z−1} = {3,5} on the full graph
+(outside = ∅ now; the region is all of V). Forcing sequence, min-index canon:</p>
+<ol class="small"><li><b>5 forces 2</b> — 5’s only white neighbour is 2 (white set was {1, 2, 4})</li><li><b>2 forces 1</b> — 2’s only white neighbour is 1 (white set was {1, 4})</li><li><b>1 forces 4</b> — 1’s only white neighbour is 4 (white set was {4})</li></ol>
+<p class="small">These arcs are merged into A (which was empty): <span class="mono">5→2 · 2→1 · 1→4</span>.
+<b>L6d:</b> delete arcs whose head lies in X_z = {5} — none (5 is a tail). <b>L6e:</b> t ← 9.</p>
+<details><summary>Inside closure (the B-F-H count engine)</summary>
+<p class="small">Each blue vertex keeps a count of its white neighbours; a vertex with count 1
+is eligible and forces its unique white neighbour; the count of each blue neighbour of the
+newly-blued vertex drops by 1. A min-heap picks the <b>smallest eligible index</b> each step
+(the paper’s example canon, tex:L621). At z = 9 the call starts from {5}: 5 has two white
+neighbours, no vertex is eligible, the process fixates immediately — white = {1,2,3,4}.</p>
+</details>
+</div>
+
+<h3>Outer iteration 2 — t = 9, X_t = {5}</h3>
+<div class="card">
+<table style="width:100%">
+<tr><th>z</th><th>step</th><th>action</th><th>blue given to closure</th><th>W</th></tr>
+<tr><td>10</td><td class='mono'>−5</td><td><span class="badge skip">[L3] skip — forget inside X_t</span></td><td class='mono'>—</td><td class='mono'>—</td></tr>
+</table>
+<p class="note">z = 10 = k+1: forgetting 5 ∈ X_t changes nothing — the second [L3] skip.
+W stays ∅, so the loop finishes (L7 adds no arcs: everything is already blue from V).</p>
+<h3>L4 — the reversal that makes S appear</h3>
+<div class="row" style="align-items:center">
+<figure><svg viewBox="0 0 280 200" width="280" height="200" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-rb" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="150" y1="235" x2="150" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="270" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="235" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><path d="M169.0,235.0 Q207.5,248.0 246.0,235.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-rb)"/><path d="M150.0,139.0 Q137.0,175.0 150.0,211.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-rb)"/><path d="M198.4,57.1 Q171.2,71.1 164.6,101.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-rb)"/><circle cx="150" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">1</text><circle cx="150" cy="120" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">2</text><circle cx="270" cy="120" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">3</text><circle cx="270" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text><circle cx="210" cy="42" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="210" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">5</text></svg><figcaption>A before L4: 1→4 · 2→1 · 5→2</figcaption></figure>
+<div class="arrowflow">⟲<br><span class="small mono">A.reverse()</span></div>
+<figure><svg viewBox="0 0 280 200" width="280" height="200" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-ra" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="150" y1="235" x2="150" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="270" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="235" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><path d="M150.0,216.0 Q163.0,180.0 150.0,144.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-ra)"/><path d="M161.6,104.9 Q188.8,90.9 195.4,61.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-ra)"/><path d="M251.0,235.0 Q212.5,222.0 174.0,235.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-ra)"/><circle cx="150" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">1</text><circle cx="150" cy="120" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="150" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">2</text><circle cx="270" cy="120" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">3</text><circle cx="270" cy="235" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="270" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text><circle cx="210" cy="42" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="210" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">5</text></svg><figcaption>A after L4: 1→2 · 2→5 · 4→1</figcaption></figure>
+</div>
+<p class="small">The scan built the chain pointing <i>into</i> the processed region
+(5→2→1→4). Reversing it points the chain <i>out</i> of the sources: 4→1→2→5.
+<b>L8 / [L6b]:</b> S = sources(A) — the vertices with no in-arc — computed <b>once</b>, here:
+<span class="mono">{3, 4}</span> (3 is idle; 4 starts the chain).</p>
+</div>
+
+<h2>4 · What comes back — ZFResult in the original names</h2>
+<div class="card row">
+<div class="col">
+<svg viewBox="0 0 420 290" width="420" height="290" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-fin" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="150" y1="235" x2="150" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="270" y2="120" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="235" x2="270" y2="235" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="120" x2="210" y2="42" stroke="#94a3b8" stroke-width="2"/><path d="M150.0,216.0 Q163.0,180.0 150.0,144.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-fin)"/><path d="M161.6,104.9 Q188.8,90.9 195.4,61.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-fin)"/><path d="M251.0,235.0 Q212.5,222.0 174.0,235.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-fin)"/><circle cx="150" cy="235" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="150" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">1</text><circle cx="150" cy="120" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="150" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">2</text><circle cx="270" cy="120" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><circle cx="270" cy="120" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="270" y="125" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">3</text><circle cx="270" cy="235" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><circle cx="270" cy="235" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="270" y="240" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text><circle cx="210" cy="42" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><text x="210" y="47" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">5</text></svg>
+<p class="note">Green double ring = S (zero forcing set). Amber ring = the fort.
+Purple arrows = the forcing arcs A.</p>
+</div>
+<div class="col">
+<p class="mono">zf_set = (3, 4)<br>forts&nbsp;&nbsp;= ({1, 2, 3, 4},)<br>arcs&nbsp;&nbsp;&nbsp;= ((4, 1), (1, 2), (2, 5))</p>
+<p class="small">Check the forcing from S = {3,4}: 4 forces 1 (its only white neighbour),
+1 forces 2, 2 forces 5 — everything blue. The fort {1,2,3,4} is valid: outside vertex 5 has
+two neighbours in it, never exactly one.</p>
+<div class="kpi">guarantee: |S| = 2 ≤ (w+1)·|F| = (2+1)·1 = 3 ✓</div>
+<h3>The v0 arrays, live (final A on indices)</h3>
+<table><tr><th>index i</th><td>0</td><td>1</td><td>2</td><td>3</td><td>4</td></tr><tr><th>name</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td></tr><tr><th>out_arcs[i]</th><td>1</td><td>4</td><td>-1</td><td>0</td><td>-1</td></tr><tr><th>→ name</th><td>2</td><td>5</td><td>−1</td><td>1</td><td>−1</td></tr><tr><th>in_arcs[i]</th><td>3</td><td>0</td><td>-1</td><td>-1</td><td>1</td></tr><tr><th>→ name</th><td>4</td><td>1</td><td>−1</td><td>−1</td><td>2</td></tr></table>
+<p class="note">out_arcs[i] = j iff in_arcs[j] = i; −1 = absent. Sources = the −1 entries of
+in_arcs = {2,3} in indices = {3,4} in names. The layer translates these back with
+to_names / arcs_to_names — the outside never sees an index.</p>
+</div>
+</div>
+
+<h2>5 · Three more inputs (same one-way procedure)</h2>
+<div class="row"><div class="card col">
+<h3 style="margin-top:0">c5 <span class="note">n=5, width 2</span></h3>
+<svg viewBox="0 0 420 280" width="420" height="280" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-m1" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="210.0" y1="45.0" x2="309.8609342109911" y2="117.55321559063051" stroke="#94a3b8" stroke-width="2"/><line x1="309.8609342109911" y1="117.55321559063051" x2="271.71745149070966" y2="234.94678440936946" stroke="#94a3b8" stroke-width="2"/><line x1="271.71745149070966" y1="234.94678440936946" x2="148.28254850929034" y2="234.94678440936949" stroke="#94a3b8" stroke-width="2"/><line x1="148.28254850929034" y1="234.94678440936949" x2="110.13906578900887" y2="117.55321559063054" stroke="#94a3b8" stroke-width="2"/><line x1="110.13906578900887" y1="117.55321559063054" x2="210.0" y2="45.0" stroke="#94a3b8" stroke-width="2"/><path d="M225.4,56.2 Q250.3,90.3 290.4,103.4" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-m1)"/><path d="M304.0,135.6 Q279.2,169.9 279.1,212.1" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-m1)"/><path d="M252.7,234.9 Q212.5,221.9 172.3,234.9" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-m1)"/><circle cx="210.0" cy="45.0" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><circle cx="210.0" cy="45.0" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="210.0" y="50.0" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">0</text><circle cx="309.8609342109911" cy="117.55321559063051" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="309.8609342109911" y="122.55321559063051" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">1</text><circle cx="271.71745149070966" cy="234.94678440936946" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="271.71745149070966" y="239.94678440936946" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">2</text><circle cx="148.28254850929034" cy="234.94678440936949" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="148.28254850929034" y="239.94678440936949" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">3</text><circle cx="110.13906578900887" cy="117.55321559063054" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><circle cx="110.13906578900887" cy="117.55321559063054" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="110.13906578900887" y="122.55321559063054" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">4</text></svg>
+<div class="small"><b>bags in:</b> <span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#ef4444"></span>{0, 1}</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span>{0, 1, 2}</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span>{0, 2, 3}</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#10b981"></span><span class="dot" style="background:#3b82f6"></span>{0, 3, 4}</span></div>
+<div class="small" style="margin-top:6px"><b>S</b> = {0, 4} ·
+<b>forts</b> = {0, 1, 2, 3} · <b>arcs</b> = 0→1 · 1→2 · 2→3</div>
+<div class="small"><b>guarantee:</b> 2 ≤ (2+1)·1 = 3 ✓</div>
+<p class="note">Your C5 from spec2, now through the full algorithm: one fort (the path 0-1-2-3), and the chain 0→1→2→3 forces the rest from S={0,4}.</p>
+</div><div class="card col">
+<h3 style="margin-top:0">two-triangles <span class="note">n=6, width 2</span></h3>
+<svg viewBox="0 0 420 200" width="420" height="200" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-m2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><line x1="70" y1="70" x2="150" y2="70" stroke="#94a3b8" stroke-width="2"/><line x1="150" y1="70" x2="110" y2="145" stroke="#94a3b8" stroke-width="2"/><line x1="70" y1="70" x2="110" y2="145" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="70" x2="350" y2="70" stroke="#94a3b8" stroke-width="2"/><line x1="350" y1="70" x2="310" y2="145" stroke="#94a3b8" stroke-width="2"/><line x1="270" y1="70" x2="310" y2="145" stroke="#94a3b8" stroke-width="2"/><path d="M131.0,70.0 Q112.5,57.0 94.0,70.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-m2)"/><path d="M289.0,70.0 Q307.5,83.0 326.0,70.0" fill="none" stroke="#7c3aed" stroke-width="2.4" marker-end="url(#ah-m2)"/><circle cx="70" cy="70" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="70" y="75" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">a</text><circle cx="150" cy="70" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><circle cx="150" cy="70" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="150" y="75" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">b</text><circle cx="110" cy="145" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><circle cx="110" cy="145" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="110" y="150" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">c</text><circle cx="270" cy="70" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><circle cx="270" cy="70" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="270" y="75" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">d</text><circle cx="350" cy="70" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><text x="350" y="75" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">e</text><circle cx="310" cy="145" r="17" fill="#ffffff" stroke="#334155" stroke-width="2"/><circle cx="310" cy="145" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="310" y="150" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">f</text></svg>
+<div class="small"><b>bags in:</b> <span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span>{a, b}</span><span class="chip"><span class="dot" style="background:#ef4444"></span><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span>{a, b, c}</span><span class="chip"><span class="dot" style="background:#f59e0b"></span><span class="dot" style="background:#10b981"></span>{b, c}</span><span class="chip"><span class="dot" style="background:#3b82f6"></span><span class="dot" style="background:#8b5cf6"></span>{d, e}</span><span class="chip"><span class="dot" style="background:#3b82f6"></span><span class="dot" style="background:#8b5cf6"></span><span class="dot" style="background:#ec4899"></span>{d, e, f}</span><span class="chip"><span class="dot" style="background:#8b5cf6"></span><span class="dot" style="background:#ec4899"></span>{e, f}</span></div>
+<div class="small" style="margin-top:6px"><b>S</b> = {b, c, d, f} ·
+<b>forts</b> = {a, b}; {d, e} · <b>arcs</b> = b→a · d→e</div>
+<div class="small"><b>guarantee:</b> 4 ≤ (2+1)·2 = 6 ✓</div>
+<p class="note">Disconnected: the bags of the two components have empty intersection, so the width-preserving nicification passes through an empty intermediate bag. The core replays ops without D3 checks and handles it: two forts, one per component.</p>
+</div><div class="card col">
+<h3 style="margin-top:0">two-isolates <span class="note">n=2, width 0</span></h3>
+<svg viewBox="0 0 420 180" width="420" height="180" xmlns="http://www.w3.org/2000/svg" style="max-width:100%;height:auto"><defs><marker id="ah-m3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7c3aed"/></marker></defs><circle cx="140" cy="110" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><circle cx="140" cy="110" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="140" y="115" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">a</text><circle cx="280" cy="110" r="17" fill="#ffffff" stroke="#f59e0b" stroke-width="4"/><circle cx="280" cy="110" r="22" fill="none" stroke="#059669" stroke-width="2.5"/><text x="280" y="115" text-anchor="middle" font-size="15" font-weight="700" fill="#0f172a" font-family="inherit">b</text></svg>
+<div class="small"><b>bags in:</b> <span class="chip"><span class="dot" style="background:#ef4444"></span>{a}</span><span class="chip"><span class="dot" style="background:#f59e0b"></span>{b}</span></div>
+<div class="small" style="margin-top:6px"><b>S</b> = {a, b} ·
+<b>forts</b> = {a}; {b} · <b>arcs</b> = (none)</div>
+<div class="small"><b>guarantee:</b> 2 ≤ (0+1)·2 = 2 ✓</div>
+<p class="note">Edge case: isolated vertices must lie in some bag (suitability). Each is its own fort and must be in S; the guarantee is tight: 2 ≤ (0+1)·2.</p>
+</div></div>
+
+<h2>6 · Where each piece lives</h2>
+<div class="card">
+<table style="width:100%">
+<tr><th>file</th><th>role</th><th>lines</th></tr>
+<tr><td class="mono">zf/__init__.py</td><td>exports only <code>zero_forcing_set</code></td><td>18</td></tr>
+<tr><td class="mono">zf/api.py</td><td>the translation layer: bijection reuse, <code>_to_nice</code>, result back to names</td><td>98</td></tr>
+<tr><td class="mono">zf/algorithm.py</td><td>the L1–L8 loop with [L3]/[L6b]/[L6c]; <code>ZFResult</code> (indices)</td><td>118</td></tr>
+<tr><td class="mono">zf/closure.py</td><td>forcing to fixation: B-F-H white counts, min-index canon</td><td>67</td></tr>
+<tr><td class="mono">zf/arcs.py</td><td>out_arcs/in_arcs arrays: add / delete / reverse / extend / sources</td><td>62</td></tr>
+<tr><td class="mono">zf/graph.py</td><td>static graph, sorted name↔index bijection, output views</td><td>47</td></tr>
+<tr><td class="mono">zf/decomposition.py</td><td>ops → bags replay; k, width</td><td>44</td></tr>
+</table>
+<p class="note">Zero <code>try</code>/<code>except</code>/<code>raise</code> anywhere in
+<code>zf/</code>. The layer never imports networkx (it reads <code>.nodes</code>/<code>.edges</code>),
+so <code>import zf</code> is standard-library-only. Not in the repo by design: building a
+decomposition from a graph (pathwidth — your API point 2, out of scope unless asked), and any
+input validation (trust ruling). Contract: SPEC-v1.md §7; math: docs/definitions.md.</p>
+</div>
+
+<div class="footer">Generated 2026-11-23 from the shipped code at commit 88d1196
+(trace cross-checked arc-for-arc against <code>zf.zero_forcing_set</code>).
+Paper: Cameron–Janssen–Mathew–Zhang, arXiv:2402.08866v1; algorithm box tex:L623–665.</div>
+
+</div>
+</body>
+</html>
