@@ -21,7 +21,7 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   guide at the top, plain self-contained items, no verification busywork. The owner is the
   paper's author — never ask him to confirm facts from his own paper; resolve and record them.
 
-## 2. Current status (rounds 1–5, 9–13; 2026-11-20/23)
+## 2. Current status (rounds 1–5, 9–14; 2026-11-20/23)
 
 **Done and verified:**
 - Lean core `zf/` (core ~370 lines, 6 modules; round 9 adds the 98-line `api.py` layer),
@@ -66,6 +66,8 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   case (house, C5, two triangles, two isolates), one figure each; forts printed only, graphics
   highlight S + forcing arcs; checkpoint before the change: `18edf22`. Old demo's factual
   error about ZF sets ignored per owner instruction (presentation only).
+- Round 14 (2026-11-23): **owner's graph H** added as case cell 6 (bags verbatim, already
+  nice); figure `docs/demo_H.png`; S=(1,3,6,10,11), three forts, guarantee 5 ≤ 9.
 - Docs: `SPEC-v1.md` (living spec, lean contract), `docs/definitions.md` (all math definitions,
   one per line), `docs/closure-review.md` (B-F-H comparison), `REPORT.md` (rounds 1–5, 9).
 - Backup: `zf-round2-backup.zip` = round-2 defensive core + 112-test suite + examples + README,

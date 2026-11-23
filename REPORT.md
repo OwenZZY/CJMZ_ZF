@@ -1,6 +1,12 @@
-# Report — zf-approx (round 13: 2026-11-23; rounds 9–12: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
+# Report — zf-approx (round 14: 2026-11-23; rounds 9–13: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
 
-**What you need to read: nothing — no pending decisions.** Round 13 (2026-11-23): the
+**What you need to read: nothing — no pending decisions.** Round 14 (2026-11-23): your graph H
+(11 vertices, 12 edges, bags already nice) added as case cell 6 in
+[docs/presentation_snippets.py](docs/presentation_snippets.py), with layout and figure
+[docs/demo_H.png](docs/demo_H.png). Result: S=(1,3,6,10,11), forts [1,2], [4,5,6,7], [10,11],
+arcs 1→2, 3→5, 6→7, 8→4, 9→8, 10→9; guarantee 5 ≤ (2+1)·3 = 9. Gate passes; nicification is
+the identity on your bags; layer == core arc-for-arc.
+Round 13 (2026-11-23): the
 presentation snippets restructured per your three requests — every demo-HTML example is now a
 copy-paste cell (house, C5, two triangles, two isolates); one cell per case, one figure each;
 forts are printed only, the graphics highlight S (green) and the forcing arcs (purple arrows).
@@ -53,6 +59,14 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
 
 ## 2. What is done
 
+- **Round 14 (2026-11-23): owner's graph H as a case cell.**
+  [docs/presentation_snippets.py](docs/presentation_snippets.py) cell 6: H and its bag list
+  verbatim as the owner gave them, plus a planar layout, run, print, and `present`. Verified:
+  `_is_path_decomp` True; the bags are already nice (nicification = identity); layer output
+  equals the core's arc-for-arc; S=(1,3,6,10,11) forces H; forts [1,2], [4,5,6,7], [10,11]
+  valid and disjoint; 5 ≤ 9. Figure [docs/demo_H.png](docs/demo_H.png). All six cells
+  re-executed headlessly. (One throwaway parity script initially passed names as indices to
+  the internal core — a script bug, fixed; the library was never at fault.)
 - **Round 13 (2026-11-23): presentation snippets restructured (owner's three requests).**
   [docs/presentation_snippets.py](docs/presentation_snippets.py) now has five cells:
   [1] setup + `present(G, pos, r)` helper (single panel: S green, forcing arcs purple with
