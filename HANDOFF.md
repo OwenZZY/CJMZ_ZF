@@ -57,6 +57,11 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   core math untouched. Demo HTML updated (names, gate, file map; fixed an index/name mix-up
   in the nice-bag timeline). Verified: 250 parity + 250 invariant trials, 125 invalid-input
   halts. Point 3 closed as none; extras deferred to the notebook phase.
+- Round 12 (2026-11-23): **presentation snippets** (owner request) —
+  `docs/presentation_snippets.py`: copy-paste Jupyter cells (imports, graph, bags, run,
+  NetworkX drawing of S/forts/arcs), tested end to end; figures `docs/demo_house.png`,
+  `docs/demo_c5.png`. The owner's old demo `resources/CJMZ_ZF_demo.html` was a presentation
+  reference only; its implementation was not searched or reused (owner instruction).
 - Docs: `SPEC-v1.md` (living spec, lean contract), `docs/definitions.md` (all math definitions,
   one per line), `docs/closure-review.md` (B-F-H comparison), `REPORT.md` (rounds 1–5, 9).
 - Backup: `zf-round2-backup.zip` = round-2 defensive core + 112-test suite + examples + README,
@@ -185,6 +190,9 @@ Item 3 (extras) deferred to your Jupyter-notebook phase. Names refactored per yo
 
 ## 7. Pointers
 
+- **Presentation (round 12): `docs/presentation_snippets.py`** — copy-paste Jupyter cells for
+  the owner's paper presentation (imports → graph → bags → run → NetworkX drawing); figures
+  `docs/demo_house.png`, `docs/demo_c5.png`.
 - **Visual demo (round 10): `docs/pipeline-demo.html`** — the whole one-way procedure as a
   figure, traced from the shipped code; open in a browser.
 - Spec: `SPEC-v1.md` · definitions: `docs/definitions.md` · review: `docs/closure-review.md` ·

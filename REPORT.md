@@ -1,6 +1,13 @@
-# Report — zf-approx (round 11: 2026-11-23; rounds 9–10: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
+# Report — zf-approx (round 12: 2026-11-23; rounds 9–11: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
 
-**What you need to read: nothing — no pending decisions.** Round 11 (2026-11-23): your naming
+**What you need to read: nothing — no pending decisions.** Round 12 (2026-11-23): the
+presentation deliverable you asked for — copy-paste Jupyter cells in
+[docs/presentation_snippets.py](docs/presentation_snippets.py) (imports → graph → bags → run →
+NetworkX drawing), tested end to end; figures [docs/demo_house.png](docs/demo_house.png),
+[docs/demo_c5.png](docs/demo_c5.png). Your old demo (`resources/CJMZ_ZF_demo.html`) was used
+as a presentation reference only; its implementation was not searched or reused, per your
+instruction. Point 3 stays closed as none.
+Round 11 (2026-11-23): your naming
 requests and the input gate are implemented — public function `zf.zf_via_path_decomp(graph, bags)`,
 modules `path_decomp.py` / `zf_closure.py` / `alg_core.py`, and `_is_path_decomp` in the layer
 halting with `ValueError` when the bags are not a path decomposition; the core is untouched.
@@ -39,6 +46,21 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
 
 ## 2. What is done
 
+- **Round 12 (2026-11-23): presentation snippets (owner request — the notebook phase begins).**
+  [docs/presentation_snippets.py](docs/presentation_snippets.py): six `# %%` cells, copy-paste
+  into Jupyter — [1] setup/imports (sys.path to the repo; networkx + matplotlib; `import zf`),
+  [2] house graph definition with layout, [3] bags (width-2 path decomposition, not nice),
+  [4] `zf.zf_via_path_decomp(G, bags)` + printed S/F/A + guarantee, [5] `present(G, pos, r)`
+  drawing helper (S green, forts amber, forcing arcs purple with arrowheads, two panels),
+  [6] C5 second example reusing the helper. All cells executed headlessly (Agg); outputs
+  match the traced state exactly (house: S=(3,4), F={1,2,3,4}, arcs sorted by tail
+  ((1,2),(2,5),(4,1)) — the chain 4→1→2→5; C5: S=(0,4), F={0,1,2,3}, A=0→1→2→3); figures
+  saved as [docs/demo_house.png](docs/demo_house.png) and
+  [docs/demo_c5.png](docs/demo_c5.png). Also fixed the demo HTML §4, which had listed the
+  house arcs in chain order instead of the contract's sorted-by-tail order. The owner's previous demo
+  (`resources/CJMZ_ZF_demo.html`, a 2023 Jupyter export of the parallel project) was consulted
+  for presentation shape only — its hidden/removed implementation was not searched or reused,
+  per his instruction. No code change to `zf/`.
 - **Round 11 (2026-11-23): renames + input gate (owner request; answers in HANDOFF §6).**
   Modules renamed with `git mv` (history preserved): `decomposition.py` →
   [zf/path_decomp.py](zf/path_decomp.py) (Python module names are identifiers — lowercase with
