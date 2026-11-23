@@ -1,6 +1,13 @@
-# Report — zf-approx (round 12: 2026-11-23; rounds 9–11: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
+# Report — zf-approx (round 13: 2026-11-23; rounds 9–12: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
 
-**What you need to read: nothing — no pending decisions.** Round 12 (2026-11-23): the
+**What you need to read: nothing — no pending decisions.** Round 13 (2026-11-23): the
+presentation snippets restructured per your three requests — every demo-HTML example is now a
+copy-paste cell (house, C5, two triangles, two isolates); one cell per case, one figure each;
+forts are printed only, the graphics highlight S (green) and the forcing arcs (purple arrows).
+Checkpoint before the change: `18edf22` (the previous two-panel version is preserved there).
+The old demo's factual error about zero forcing sets is ignored per your instruction —
+presentation only.
+Round 12 (2026-11-23): the
 presentation deliverable you asked for — copy-paste Jupyter cells in
 [docs/presentation_snippets.py](docs/presentation_snippets.py) (imports → graph → bags → run →
 NetworkX drawing), tested end to end; figures [docs/demo_house.png](docs/demo_house.png),
@@ -46,6 +53,22 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
 
 ## 2. What is done
 
+- **Round 13 (2026-11-23): presentation snippets restructured (owner's three requests).**
+  [docs/presentation_snippets.py](docs/presentation_snippets.py) now has five cells:
+  [1] setup + `present(G, pos, r)` helper (single panel: S green, forcing arcs purple with
+  arrowheads; **no fort graphics** — forts are printed by each case cell), then **one cell per
+  case** for every example in the demo HTML: [2] house, [3] C5, [4] two triangles
+  (disconnected), [5] two isolates (edgeless). Each case cell defines graph + layout + bags,
+  runs `zf.zf_via_path_decomp`, prints S / forts / arcs / guarantee, and draws one figure.
+  Figures regenerated: [docs/demo_house.png](docs/demo_house.png),
+  [docs/demo_c5.png](docs/demo_c5.png),
+  [docs/demo_two_triangles.png](docs/demo_two_triangles.png),
+  [docs/demo_two_isolates.png](docs/demo_two_isolates.png) (edgeless case gets a shorter
+  panel). All cells executed headlessly; outputs match the traced demo states (house S=(3,4);
+  C5 S=(0,4); two triangles S=(b,c,d,f), arcs b→a, d→e; isolates S=(a,b), no arcs).
+  Checkpoint commit before the change: `18edf22` (owner request; the tree had nothing else of
+  the agent's uncommitted). The old demo's factual error about zero forcing sets: noted and
+  ignored per owner instruction — no investigation, presentation only.
 - **Round 12 (2026-11-23): presentation snippets (owner request — the notebook phase begins).**
   [docs/presentation_snippets.py](docs/presentation_snippets.py): six `# %%` cells, copy-paste
   into Jupyter — [1] setup/imports (sys.path to the repo; networkx + matplotlib; `import zf`),

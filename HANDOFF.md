@@ -21,7 +21,7 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   guide at the top, plain self-contained items, no verification busywork. The owner is the
   paper's author — never ask him to confirm facts from his own paper; resolve and record them.
 
-## 2. Current status (rounds 1–5, 9–11; 2026-11-20/23)
+## 2. Current status (rounds 1–5, 9–13; 2026-11-20/23)
 
 **Done and verified:**
 - Lean core `zf/` (core ~370 lines, 6 modules; round 9 adds the 98-line `api.py` layer),
@@ -62,6 +62,10 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   NetworkX drawing of S/forts/arcs), tested end to end; figures `docs/demo_house.png`,
   `docs/demo_c5.png`. The owner's old demo `resources/CJMZ_ZF_demo.html` was a presentation
   reference only; its implementation was not searched or reused (owner instruction).
+- Round 13 (2026-11-23): **snippets restructured** (owner request) — one cell per demo-HTML
+  case (house, C5, two triangles, two isolates), one figure each; forts printed only, graphics
+  highlight S + forcing arcs; checkpoint before the change: `18edf22`. Old demo's factual
+  error about ZF sets ignored per owner instruction (presentation only).
 - Docs: `SPEC-v1.md` (living spec, lean contract), `docs/definitions.md` (all math definitions,
   one per line), `docs/closure-review.md` (B-F-H comparison), `REPORT.md` (rounds 1–5, 9).
 - Backup: `zf-round2-backup.zip` = round-2 defensive core + 112-test suite + examples + README,
@@ -188,11 +192,23 @@ Item 3 (extras) deferred to your Jupyter-notebook phase. Names refactored per yo
 >   answered — the object and Algorithm 1 are path-specific (linear ops, interval regions);
 >   a tree decomposition would be a different algorithm, not a rename. See SPEC-v1 §7.4.
 
+**Owner answers given in chat 2026-11-23 (later), recorded by the agent (round 13):**
+
+> - Make the demo-HTML examples copy-pasteable too (house, C5, two triangles, two isolates).
+> - Graphics: one cell per case; no fort presentation — print the forts only; highlight the
+>   arc set and the zero forcing set in the figure.
+> - The old demo (`resources/CJMZ_ZF_demo.html`) has a factual error about zero forcing sets:
+>   "do not mind but only care about the presentation" — ignored, not investigated.
+> - "Could you make a commit before proceed" — checkpoint verified: all prior deliverables
+>   were already committed at `18edf22`; nothing of the agent's was uncommitted (only the
+>   owner's AGENTS.md edit and the untracked reference files, both left as-is by ruling).
+
 ## 7. Pointers
 
-- **Presentation (round 12): `docs/presentation_snippets.py`** — copy-paste Jupyter cells for
-  the owner's paper presentation (imports → graph → bags → run → NetworkX drawing); figures
-  `docs/demo_house.png`, `docs/demo_c5.png`.
+- **Presentation (rounds 12–13): `docs/presentation_snippets.py`** — copy-paste Jupyter cells:
+  setup + one cell per demo-HTML case (house, C5, two triangles, two isolates); one figure per
+  case, S green + forcing arcs purple, forts printed only. Figures: `docs/demo_house.png`,
+  `docs/demo_c5.png`, `docs/demo_two_triangles.png`, `docs/demo_two_isolates.png`.
 - **Visual demo (round 10): `docs/pipeline-demo.html`** — the whole one-way procedure as a
   figure, traced from the shipped code; open in a browser.
 - Spec: `SPEC-v1.md` · definitions: `docs/definitions.md` · review: `docs/closure-review.md` ·
