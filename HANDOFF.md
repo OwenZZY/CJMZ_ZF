@@ -1,9 +1,9 @@
 # HANDOFF — zf-approx
 
-**Where to take off:** read §1 (design principles) and §8 (the outside API — frozen by the
-owner's answers and implemented in round 9). Remaining optional items are §4; the owner's
-recorded answers are §6. Current status is §2, git is §3. The core deliverables are committed
-at `76700f8`; the round-9 outside API is committed on top (local, not pushed — run `git log`).
+**Where to take off:** read §1 (design principles) and §8 (the outside API, frozen and
+implemented). Current status is §2, git is §3, optional next items are §4, closed questions §5,
+the owner-rulings archive §6, pointers §7. Round 17 (2026-11-24) consolidated this file and
+REPORT.md; earlier versions are in git. Everything is local; nothing is pushed.
 
 ---
 
@@ -21,285 +21,145 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   guide at the top, plain self-contained items, no verification busywork. The owner is the
   paper's author — never ask him to confirm facts from his own paper; resolve and record them.
 
-## 2. Current status (rounds 1–5, 9–16; 2026-11-20/23)
+## 2. Current status (round 17, 2026-11-24)
 
-**Done and verified:**
-- Lean core `zf/` (core ~370 lines, 6 modules; round 9 adds the 98-line `api.py` layer),
-  **zero** `try`/`except`/`raise`:
-  - `graph.py` — `Graph`: static, 0-based, name bijection (`names` index→name, `index` name→index),
-    edge list, `adj`; output views `to_names(vertices)` and `arcs_to_names(arcs)`.
-  - `arcs.py` — `Arcs`: `out_arcs`/`in_arcs` (−1 = absent), dynamic `count`/`__len__`,
-    `add`/`delete(heads)`/`reverse`/`extend`/`sources(vertices=None)`/`arcs()`.
-  - `decomposition.py` — `NicePathDecomposition`: `ops=(v,±1)`, `bags`/`k`/`width`, `from_bags`;
-    no validation.
-  - `closure.py` — `closure(graph, blue) -> (white, arcs)`: Brimkov–Fast–Hicks count engine
-    (complementary white counts), **min-index canon** (min-heap), stale-entry guard.
-  - `algorithm.py` — `zero_forcing_set(graph, pd) -> ZFResult(zf_set, forts, arcs)`:
-    Algorithm L1–L8 with the three tricks.
-- **Tricks:** [L3] introduce steps and forgets of vertices in `X_t` skip closure; [L6b] `S`
-  computed once at the end (`A.sources()`); [L6c] closure on the FULL graph with outside vertices
-  blued (no induced subgraph ever built).
-- **Canon:** smallest-eligible-index = paper tex:L621 = the parallel project's `zf_closure.py`;
-  arc-for-arc parity verified (960/960 round 2; 480/480 round 3).
-- `examples.py` — 8 explicit blocks (path a-b-c, P3, P4, C5 A/B, star, K4, C5 fort from `[0]`,
-  sources-mask demo); all assertions pass (`python3 examples.py`).
-- Round 9 (2026-11-21): **outside API implemented** — `zf/api.py` (translation layer: NetworkX
-  graph + list of bags → nice-ification → unchanged core → names-based result); `zf/__init__.py`
-  exports only `zero_forcing_set`. Frozen contract and conventions: §8. Verified by throwaway
-  script (deleted after use): nice-input parity with the core, brute-force invariants on random
-  graphs incl. disconnected/edgeless, width preservation, determinism.
-- Round 10 (2026-11-23): **visual demonstration** (owner request) — `docs/pipeline-demo.html`:
-  the one-way pipeline as a figure (input → layer → loop → names-based result), all states
-  traced from the shipped code; house-graph walkthrough + C5/disconnected/isolate cards.
-- Round 11 (2026-11-23): **renames + input gate** (owner request) — modules `path_decomp.py`,
-  `zf_closure.py`, `alg_core.py`; public function `zf_via_path_decomp` (internal `zf_core`);
-  `_is_path_decomp` gate in the layer halts with `ValueError` on non-path-decomposition bags;
-  core math untouched. Demo HTML updated (names, gate, file map; fixed an index/name mix-up
-  in the nice-bag timeline). Verified: 250 parity + 250 invariant trials, 125 invalid-input
-  halts. Point 3 closed as none; extras deferred to the notebook phase.
-- Round 12 (2026-11-23): **presentation snippets** (owner request) —
-  `docs/presentation_snippets.py`: copy-paste Jupyter cells (imports, graph, bags, run,
-  NetworkX drawing of S/forts/arcs), tested end to end; figures `docs/demo_house.png`,
-  `docs/demo_c5.png`. The owner's old demo `resources/CJMZ_ZF_demo.html` was a presentation
-  reference only; its implementation was not searched or reused (owner instruction).
-- Round 13 (2026-11-23): **snippets restructured** (owner request) — one cell per demo-HTML
-  case (house, C5, two triangles, two isolates), one figure each; forts printed only, graphics
-  highlight S + forcing arcs; checkpoint before the change: `18edf22`. Old demo's factual
-  error about ZF sets ignored per owner instruction (presentation only).
-- Round 14 (2026-11-23): **owner's graph H** added as case cell 6 (bags verbatim, already
-  nice); figure `docs/demo_H.png`; S=(1,3,6,10,11), three forts, guarantee 5 ≤ 9.
-- Round 16 (2026-11-23): **connectedness gate** (owner ruling) — `_is_connected` in the layer
-  halts with `ValueError` on disconnected graphs (paper assumption tex:L822); core untouched;
-  disconnected examples removed from snippets and demo.
-- Docs: `SPEC-v1.md` (living spec, lean contract), `docs/definitions.md` (all math definitions,
-  one per line), `docs/closure-review.md` (B-F-H comparison), `REPORT.md` (rounds 1–5, 9).
-- Backup: `zf-round2-backup.zip` = round-2 defensive core + 112-test suite + examples + README,
-  preserved verbatim.
+**Package `zf/` — 7 modules, 528 lines, stdlib-only; one export.**
+
+| module | lines | role |
+|---|---|---|
+| [zf/__init__.py](zf/__init__.py) | 19 | exports only `zf_via_path_decomp` (v0.3.0) |
+| [zf/api.py](zf/api.py) | 171 | layer: gates `_is_connected` + `_is_path_decomp`, `_to_nice`, names-based `ZFResult` |
+| [zf/alg_core.py](zf/alg_core.py) | 118 | `zf_core`: loop L1–L8 with the three tricks; internal `ZFResult` (indices) |
+| [zf/zf_closure.py](zf/zf_closure.py) | 67 | `closure`: B-F-H white counts, min-index canon, stale-entry guard |
+| [zf/arcs.py](zf/arcs.py) | 62 | `Arcs`: out/in arrays, add/delete(heads)/reverse/extend/sources(vertices) |
+| [zf/graph.py](zf/graph.py) | 47 | `Graph`: static, sorted name↔index bijection, `to_names`/`arcs_to_names` |
+| [zf/path_decomp.py](zf/path_decomp.py) | 44 | `NicePathDecomposition`: ops=(v,±1), bags, k, width; no validation |
+
+The five core modules contain **zero** `try`/`except`/`raise`; the only two raises in the
+package are the layer's gates. Tricks: [L3] introduce steps and forgets inside `X_t` skip
+closure; [L6b] `S = A.sources()` once at the end; [L6c] closure on the FULL graph with outside
+vertices blued (no induced subgraph ever built). Canon: smallest eligible index (tex:L621),
+arc-for-arc parity with the parallel project verified.
+
+**Around the package:** [examples.py](examples.py) (8 blocks, internal core, all pass);
+[SPEC-v1.md](SPEC-v1.md) (living contract); [docs/definitions.md](docs/definitions.md);
+[docs/closure-review.md](docs/closure-review.md); [docs/pipeline-demo.html](docs/pipeline-demo.html)
+(traced one-way figure); [docs/presentation_snippets.py](docs/presentation_snippets.py) (4 cells:
+setup, house, C5, H) and [docs/standalone_H.py](docs/standalone_H.py) (one paste); figures
+`docs/demo_house.png`, `docs/demo_c5.png`, `docs/demo_H.png`;
+[zf-round2-backup.zip](zf-round2-backup.zip) (round-2 defensive core + 112 tests, verbatim).
+Status and history: [REPORT.md](REPORT.md).
 
 **Key math facts (do not re-derive):**
-- Indexing: `ops` length `2n`; `k = 2n−1` non-empty bags; 0-based op `z−1` produces `X_z`; signs
-  exactly `{+1, −1}` (no `0` op). Audited correct in code and report.
-- `sources(vertices)` = `sources ∩ mask`: needed because [L6c] blues outside vertices, which
-  otherwise appear as spurious sources. The main algorithm computes `sources(A)` once at the end
-  over all `V`, so it needs no mid-loop mask.
-- Input suitability = D1–D4 + every vertex in some bag; the caller's responsibility (weaker than
-  the paper's connectedness assumption, so edgeless/disconnected graphs work).
-- Paper: arXiv:2402.08866v1. Algorithm box tex:L623–665; canon tex:L621; "S once at end" remark
-  tex:L685; closure subroutine = Brimkov–Fast–Hicks, EJOR 273(3):889–903 (2019), Algorithm 1.
-  Local tex: `resources/paper/arXiv-2402.08866v1/2024-02-13-Zero_Forcing_Approx_Alg.tex`.
+- Indexing: `ops` length `2n`; `k = 2n−1`; 0-based op `z−1` produces `X_z`; signs exactly
+  `{+1, −1}` (no `0` op). Audited correct.
+- `sources(vertices)` = `sources ∩ mask`: [L6c] blues outside vertices, which otherwise appear
+  as spurious sources; the main algorithm needs no mid-loop mask (S once at the end over V).
+- Core suitability = D1–D4 + every vertex in some bag (caller's responsibility; disconnected and
+  edgeless graphs work internally). Outside API additionally requires connected (round 16).
+- Paper: arXiv:2402.08866v1. Algorithm box tex:L623–665; canon tex:L621; "S once at end"
+  tex:L685; connectedness assumption tex:L822; closure = Brimkov–Fast–Hicks, EJOR 273(3):889–903
+  (2019), Algorithm 1; nicification = Bodlaender–Kloks Lemma 13.1.3, tex:L580–581. Local tex:
+  `resources/paper/arXiv-2402.08866v1/2024-02-13-Zero_Forcing_Approx_Alg.tex`.
 
 ## 3. Git state
 
-- The core deliverables are in commit `76700f8` (12 files). This handoff is committed on top of
-  it (the latest commit — run `git log` to see its hash). Everything is local; nothing is pushed.
-- Files in the repository: the 12 deliverables, this handoff, and the baseline `.gitignore`,
-  `AGENTS.md`, `HANDOFF.md`.
-- Left as-is (not committed): your edit to `AGENTS.md`. Never added to the repository:
-  `SPEC.md` (your v0), `resources/` (the papers), `spec2` (not created by me).
+- Chain (all local, nothing pushed, no remote changes): `67e8008` baseline → `e965858` chore →
+  `76700f8` core rounds 1–5 → `aa5d70c` handoff → `b53242d` round-8 API design → `88d1196`
+  round 9 → `22aadf0` round 10 → `fa1e848` round 11 → `18edf22` round 12 → `c4d093b` round 13 →
+  `55ddf70` round 14 → `2f8afc4` round 15 → `868b23f` round 16 → round 17 (this consolidation).
+- Left as-is, never committed by the agent: your [AGENTS.md](AGENTS.md) edit; untracked
+  `SPEC.md` (your v0), `resources/` (the papers), `spec2`, and your `demo.ipynb` /
+  `.ipynb_checkpoints/`.
 - No push and no remote change (AGENTS.md rule 7).
 
-## 4. What I expect to do next round (I will confirm scope with you first)
+## 4. Optional next items (defaults stand; only on your word)
 
-**Round-9 status (2026-11-21):** item 1 done — scope confirmed by your answers (§6), API frozen
-and implemented (§8). Items 2–4: defaults stand (you did not ask). Item 5 done this round.
-Item 6 closed (numbering correct).
-**Round-11 status (2026-11-23):** item 2 refined — bags are forced to be a path decomposition
-via the layer gate (`_is_path_decomp`); pathwidth construction still out unless asked.
-Item 3 (extras) deferred to your Jupyter-notebook phase. Names refactored per your request (§6).
+1. **Pathwidth / building bags from a graph** — your API point 2. *Default: out of scope.*
+2. **Notebook-phase extras** — more worked examples, direct guarantee display. *Deferred by you
+   (round 11) to your Jupyter presentation of the paper.*
+3. **Public release** — packaging (README/pyproject/license) and the SPEC-v1 §4 name proposal.
+   *Default: keep the names; `graph.py`/`arcs.py` stay generic unless you want a `zf_` prefix.*
+4. **Disconnected graphs at the API** — e.g. per-component runs unioned. *Default: rejected
+   (round 16 ruling); a layer feature if ever wanted, never a core change.*
 
-1. **One function for the outside.** Today the package exposes several names (`Graph`, `Arcs`,
-   `NicePathDecomposition`, `closure`, `zero_forcing_set`, `ZFResult`). You asked for a single
-   interface, so I would hide the helpers and leave just one function for you to call.
-   *Done (round 9). The design is §8 (graph given as NetworkX; a translation layer in between).
-   Your answer on the return shape and API points 2 and 3 is recorded in §6.*
-2. **Where the decomposition comes from.** Today you supply a ready-made nice path decomposition
-   (the list of add/remove steps). Building one from a graph is a separate algorithm (pathwidth).
-   *Default: not part of this project unless you ask.*
-3. **More worked examples.** Name the graphs you want and I will work them through.
-   *Default: only when you ask.*
-4. **Show the guarantee directly.** The result already satisfies: size of the zero forcing set
-   ≤ (width + 1) × (number of forts). I can display this comparison more directly if it helps.
-   *Default: only when you ask.*
-5. **Keep the spec (`SPEC-v1.md`) and the report (`REPORT.md`) current** each round.
-6. **The numbering question** in §5, if you still see a problem.
+## 5. Closed questions (resolution recorded)
 
-## 5. Open questions (answer in one line; if you skip, the default applies)
+- One function outside? **Yes** — implemented round 9, renamed round 11 (§8).
+- Add `SPEC.md` / `resources/` / `spec2` to git? **No** — default applied, they stay out.
+- Numbering mistake? **None** — round-5 audit stands (`k=2n−1`, op `z−1` → `X_z`, signs ±1).
+- API point 3? **None** — never stated; owner does not recognize it; closed round 11.
 
-**All resolved (2026-11-21):** one function — yes, implemented (§8); left-out files — stay out
-(default applied); numbering — correct (default applied, round-5 audit stands).
+## 6. Owner rulings archive (recorded by the agent from chat; key quotes verbatim)
 
-- **Just one function?** Should the package give you only one function to call from outside —
-  you pass in a graph and its decomposition, and it returns the zero forcing set, the forts, and
-  the arcs, all using your original vertex names — with every helper hidden inside?
-  *Default: yes; that one function is `zero_forcing_set`.*
-- **Add the left-out files to git?** Your v0 `SPEC.md`, the paper PDFs in `resources/`, and
-  `spec2` are not in the repository right now. Should I add them?
-  *Default: leave them out.*
-- **Any numbering mistake left?** I checked the add/remove step numbering and the +1/−1 signs
-  and found them correct. Do you still see a specific place where a number is off by one? If so,
-  tell me the file and line.
-  *Default: it is correct; nothing to change.*
+**2026-11-21 (round 9).** Return shape: "a result object in the original vertex names"
+(`zf_set`, `forts`, `arcs` all in names). On trust vs checking: "No, in fact, the translation
+(transition) layer should involve a function that making a path decomposition into a nice p-d"
+— read then as: no checking, but an explicit nicification function (`_to_nice`). API point 2
+(verbatim): "Where the decomposition comes from. … Building one from a graph is a separate
+algorithm (pathwidth). *Default: not part of this project unless you ask.*"
 
-## 6. Owner comment area (please fill in — feedback / where to take off)
+**2026-11-23 (round 11).** Naming: `zero_forcing_set` is "way too general as a noun … does not
+say anything about the pd part"; requested `decomposition.py` → "path decomp.py" (agent applied
+Python identifier rules: `path_decomp.py`), `closure.py` → `zf_closure.py`, `algorithm.py` →
+`alg_core.py`, and a public name saying "via path decomposition" (agent chose
+`zf_via_path_decomp`; internal `zf_core`). Validation (supersedes the round-9 trust default for
+the layer): "we will force the user to enter a path decomposition and nic-ify it … something
+like `_is_path_decomp` returning true or false, and halt immediately when it is not." And:
+"leave the core as it is, and make sure the math part is understood by mathematicians."
+Extras: "leave it for now" (notebook phase). Tree-decomposition question answered: path-specific
+object and algorithm; a tree decomposition would be a different algorithm.
 
-**Owner answers given in chat 2026-11-21, recorded by the agent (round 9):**
+**2026-11-23 (rounds 13–15).** Make the demo-HTML examples copy-pasteable; "one cell per case";
+"only print the forts but highlight the arc sets and the zero forcing set"; the old demo
+(`resources/CJMZ_ZF_demo.html`) "has factual error about zero forcing sets, do not mind but only
+care about the presentation"; "make a commit before proceed" (checkpoint `18edf22` verified);
+then his graph H (11 vertices, bags already nice) as a case, and one complete self-contained
+snippet for it.
 
-> - Where should the next chat begin?
->   - (not answered; agent note: the outside API is now implemented — begin from §8.)
-> - What should the one outside function take as input, and give back?
->   - Input: as §8 point 1 (NetworkX graph + list of bags). Give back: **a result object in the
->     original vertex names** (owner chose the recommended default: `zf_set`, `forts`, `arcs`
->     all in names).
-> - Which graphs or examples do you want next?
->   - (not answered; default: only when asked.)
-> - Is anything in the "key math facts" (§2) wrong?
->   - (not answered; no correction given — facts stand.)
-> - What is in scope / out of scope for next round?
->   - (not answered directly; see API point 2 below — pathwidth construction stays out unless
->     asked.)
-> - API points 2 and 3 (see §8 — point 1 is recorded):
->   - **Point 2 (owner, verbatim):** "Where the decomposition comes from. Today you supply a
->     ready-made nice path decomposition (the list of add/remove steps). Building one from a
->     graph is a separate algorithm (pathwidth). *Default: not part of this project unless you
->     ask.*" — This is §4 item 2; it was recorded there but never carried into §8. The default
->     stands: the caller supplies the bags; the layer makes them nice; building a decomposition
->     from a graph (pathwidth) is out of scope unless asked.
->   - **Point 3:** not stated. Proceeding without it; fold it in whenever given.
-> - Anything else:
->   - **On trust vs checking (owner, verbatim):** "No, in fact, the translation (transition)
->     layer should involve a function that making a path decomposition into a nice p-d" —
->     read as: no suitability checking (trust, like the core); the layer must contain an
->     explicit function turning a path decomposition into a nice one. Implemented as
->     `_to_nice` in `zf/api.py` (round 9).
+**2026-11-23 (round 16).** "What happen when the input graph is disconnected? … I do not want
+that, should we rule out the case (again, of course, outside of the core) of disconnected
+graph" — implemented: `_is_connected` gate, `ValueError` halt, core untouched; disconnected
+examples removed from snippets and demo.
 
-**Owner answers given in chat 2026-11-23, recorded by the agent (round 11):**
-
-> - Naming: `zero_forcing_set` is "way too general as a noun … does not say anything about
->   the pd part"; `graph`/`decomposition`/`closure` "have no connection with zero forcing".
->   Requested: `decomposition.py` → "path decomp.py" (agent applied Python identifier rules:
->   `path_decomp.py`), `closure.py` → `zf_closure.py`, `algorithm.py` → `alg_core.py`,
->   `zero_forcing_set()` → a name saying "via path decomposition" (agent chose
->   `zf_via_path_decomp`; internal loop function `zf_core`). `graph.py`/`arcs.py` kept
->   generic (general-purpose structures) — offered to rename on request.
-> - Validation (supersedes the round-9 trust default FOR THE LAYER): "we will force the user
->   to enter a path decomposition and nic-ify it … another layer: to test whether the input
->   bags makes up a path decomposition, something like `_is_path_decomp` returning true or
->   false, and halt immediately when it is not." Implemented: `_is_path_decomp` in
->   `zf/api.py`; the public call raises `ValueError` on False. "Leave the core as it is, and
->   make sure the math part is understood by mathematicians" — core untouched (still zero
->   try/except/raise; paper notation and L-line comments kept).
-> - Extras: "leave it for now" — more examples / guarantee display deferred to the owner's
->   Jupyter-notebook presentation of the paper.
-> - Point 3: owner does not recognize it ("I do not see what is it referring to") — closed
->   as none; nothing pending. (Origin: round-8 chat apparently numbered API remarks; only
->   point 1 was recorded, point 2 identified in round 9, point 3 never stated.)
-> - Tree-decomposition question ("or it really can be a tree decomposition right?"):
->   answered — the object and Algorithm 1 are path-specific (linear ops, interval regions);
->   a tree decomposition would be a different algorithm, not a rename. See SPEC-v1 §7.4.
-
-**Owner answers given in chat 2026-11-23 (later), recorded by the agent (round 13):**
-
-> - Make the demo-HTML examples copy-pasteable too (house, C5, two triangles, two isolates).
-> - Graphics: one cell per case; no fort presentation — print the forts only; highlight the
->   arc set and the zero forcing set in the figure.
-> - The old demo (`resources/CJMZ_ZF_demo.html`) has a factual error about zero forcing sets:
->   "do not mind but only care about the presentation" — ignored, not investigated.
-> - "Could you make a commit before proceed" — checkpoint verified: all prior deliverables
->   were already committed at `18edf22`; nothing of the agent's was uncommitted (only the
->   owner's AGENTS.md edit and the untracked reference files, both left as-is by ruling).
-
-**Owner ruling given in chat 2026-11-23 (late), recorded by the agent (round 16):**
-
-> - "What happen when the input graph is disconnected? … I do not want that, should we rule
->   out the case (again, of course, outside of the core) of disconnected graph" — implemented:
->   `_is_connected` gate in the layer, `ValueError` halt; core untouched. Disconnected examples
->   (two triangles, two isolates) removed from the presentation snippets and the demo HTML.
+**2026-11-24 (round 17).** "we now reach another point of cleaning up REPORT, HANDOFF, and
+commit" — this consolidation.
 
 ## 7. Pointers
 
-- **Presentation (rounds 12–13): `docs/presentation_snippets.py`** — copy-paste Jupyter cells:
-  setup + one cell per demo-HTML case (house, C5, two triangles, two isolates); one figure per
-  case, S green + forcing arcs purple, forts printed only. Figures: `docs/demo_house.png`,
-  `docs/demo_c5.png`, `docs/demo_two_triangles.png`, `docs/demo_two_isolates.png`.
-- **Visual demo (round 10): `docs/pipeline-demo.html`** — the whole one-way procedure as a
-  figure, traced from the shipped code; open in a browser.
-- Spec: `SPEC-v1.md` · definitions: `docs/definitions.md` · review: `docs/closure-review.md` ·
-  status: `REPORT.md`.
-- Examples: `examples.py` (`python3 examples.py`).
-- Prior work + tests: `zf-round2-backup.zip`.
+- Presentation: [docs/presentation_snippets.py](docs/presentation_snippets.py) (4 cells),
+  [docs/standalone_H.py](docs/standalone_H.py); figures `docs/demo_house.png`,
+  `docs/demo_c5.png`, `docs/demo_H.png`.
+- Visual demo: [docs/pipeline-demo.html](docs/pipeline-demo.html) — open in a browser.
+- Spec: [SPEC-v1.md](SPEC-v1.md) · definitions: [docs/definitions.md](docs/definitions.md) ·
+  closure review: [docs/closure-review.md](docs/closure-review.md) · status: [REPORT.md](REPORT.md).
+- Examples: [examples.py](examples.py) (`python3 examples.py`).
+- Prior work + tests: [zf-round2-backup.zip](zf-round2-backup.zip).
 - Paper: `resources/paper/arXiv-2402.08866v1/` · Brimkov PDFs: `resources/brimkov*.pdf`.
 
-## 8. Outside API — frozen and implemented (round-8 design; round-9 implementation, 2026-11-21)
+## 8. Outside API — frozen contract (current)
 
-Owner's point 1 is below. Point 2 was identified by the owner on 2026-11-21 (§6): it is the
-decomposition-provenance item of §4.2, and its default stands (pathwidth construction out of
-scope unless asked). Point 3 was not stated; proceeding without it.
-
-**The shape (I agree).** One function is the only thing the outside world calls. It takes two
-things:
-- a graph, given as a **NetworkX graph** (`networkx.Graph`: simple, undirected; its nodes are the
-  vertex names), and
-- a **list of bags** (each bag a set of vertex names) forming a path decomposition — it does
-  **not** have to be "nice".
-
-Between that function and the lean core sits a **translation layer** — the only place that
-touches external formats. It turns the NetworkX graph into the internal `Graph` (0-based indices
-plus the name bijection), and the list of bags into the internal `NicePathDecomposition`. The
-core then runs unchanged on indices, and the layer translates the answer (zero forcing set,
-forts, arcs) back into the original names. This gives exactly "one interface outside, lean
-internal core": the core keeps trusting suitable inputs; all format handling lives in the layer.
-
-**Fixed choice — NetworkX (one graph type, not two).** Of the two options offered (NetworkX or
-an edge list), I fix **NetworkX** as the single outside graph type, because:
-- its nodes already are the vertex names, and it includes isolated vertices (an edge list alone
-  loses isolated vertices, which the bags must still cover);
-- it is the standard graph object in the mathematics/algorithm community, so a public release
-  interoperates naturally;
-- the dependency is confined to the translation layer — the core stays standard-library only.
-
-If a zero-dependency package is preferred, the fallback is one fixed edge-list format; say so and
-I will switch. Otherwise NetworkX stands. The bags are fixed as a **list of sets of names**.
-
-**What the translation layer must do (next-round implementation items):**
-1. NetworkX graph → internal `Graph` (sort names to indices; edges; adjacency).
-2. List of bags → internal nice decomposition. Since the bags need not be nice, this step must
-   **make the decomposition nice**: pad empty end bags and replace any multi-vertex bag-to-bag
-   change with a sequence of single-vertex add/remove steps, keeping the path-decomposition
-   properties. (Standard "nice-ification"; the paper cites Bodlaender–Kloks, Lemma 13.1.3.)
-3. Run the core; translate the result back to names.
-
-**Decided (owner, 2026-11-21 — §6):** the layer **must contain an explicit function that makes
-a path decomposition nice** — implemented as `_to_nice` in `zf/api.py`.
-**Superseded in part (owner, 2026-11-23 — round 11):** the layer now also **checks** the bags
-(`_is_path_decomp`, halt with `ValueError` on False); the core still trusts its inputs.
-
-**Owner API points 2 and 3:** point 2 = §4.2 (decomposition provenance; default stands: the
-caller supplies bags, building one from a graph is out of scope unless asked). Point 3:
-**closed round 11** — the owner does not recognize it; recorded as none.
-
-**Implemented (rounds 9–11) — the frozen contract:**
-- `zf.zf_via_path_decomp(graph, bags)` is the only export (`zf/__init__.py`, v0.3.0; renamed
-  from `zero_forcing_set` in round 11). `graph` is a
-  `networkx.Graph` (simple, undirected; nodes = vertex names); `bags` is a list of sets of
-  names forming a path decomposition (D1/D2 + every vertex in some bag; not necessarily nice).
-- **Input gates (rounds 11, 16):** `_is_connected(graph) -> bool` (round 16: the outside API
-  requires a connected graph, the paper's assumption; null/single-vertex vacuously connected)
-  and `_is_path_decomp(graph, bags) -> bool` (bag elements are vertices, coverage, D1, D2);
-  the public call halts with `ValueError` when either is False. These are the only `raise`s in
-  the package; the five core modules remain try/except/raise-free.
-- Returns a frozen `ZFResult` (in `zf/api.py`) **in the original names**: `zf_set` (tuple of
-  names, sorted), `forts` (tuple of frozensets of names, in discovery order), `arcs` (tuple of
-  `(name, name)` pairs, sorted by tail).
-- Nice-ification convention (`_to_nice`, forget-first — forced by width preservation): drop
-  empty and consecutive-duplicate bags, pad empty ends implicitly; between consecutive bags
-  forget `X_i \ X_{i+1}` in increasing index order, then introduce `X_{i+1} \ X_i` in increasing
-  index order. Every input bag appears verbatim; width is preserved; each vertex is introduced
-  once and forgotten once. For disconnected inputs, consecutive bags may have empty
-  intersection; the width-preserving sequence then passes through an empty intermediate bag
-  (D3 relaxed). The core replays ops without D3 checks and handles this correctly (verified).
-- The layer never imports networkx: it reads `graph.nodes` / `graph.edges` (trusted, duck-typed),
-  so `import zf` stays standard-library-only; networkx is needed only to construct inputs.
-- The core (`zf/graph.py`, `arcs.py`, `path_decomp.py`, `zf_closure.py`, `alg_core.py`; the
-  last three renamed in round 11 from `decomposition.py`, `closure.py`, `algorithm.py`) is
-  unchanged mathematically; helpers remain importable from their modules but are not package
-  exports. `examples.py` imports them from the submodules.
+**`zf.zf_via_path_decomp(graph, bags)`** — the only export.
+- `graph`: `networkx.Graph`, simple, undirected, **connected** (null/single vertex vacuously
+  connected); nodes are the vertex names (distinct, sortable).
+- `bags`: list of sets of names forming a path decomposition (D1 edge coverage, D2 contiguity,
+  every vertex covered); **not** necessarily nice.
+- Gates (layer only): `_is_connected(graph)` then `_is_path_decomp(graph, bags)`; `ValueError`
+  halt on either failure. The core trusts its inputs and raises nothing.
+- Returns frozen `ZFResult` in original names: `zf_set` (sorted tuple), `forts` (frozensets,
+  discovery order), `arcs` ((name, name) pairs, sorted by tail; sources = `zf_set`).
+  Guarantee: |S| ≤ (w+1)·|F|, w = max|bag| − 1.
+- Layer steps: gates → `Graph(graph.nodes, graph.edges)` (sorted bijection reused) →
+  `_to_nice` → `zf_core` → translate back via `to_names`/`arcs_to_names`. The layer never
+  imports networkx (reads `.nodes`/`.edges`), so `import zf` is stdlib-only.
+- `_to_nice` convention: drop empty/duplicate bags; between consecutive bags forget
+  `X_i \ X_{i+1}` in increasing index order, then introduce `X_{i+1} \ X_i` in increasing index
+  order (forget-first is forced by width preservation); every input bag appears verbatim;
+  identity on already-nice bags. Disconnected inputs would pass through an empty intermediate
+  bag — unreachable from the API since round 16, handled correctly by the internal core.
+- Design rationale (round 8): NetworkX fixed as the single outside graph type (nodes already
+  are names; standard in the community; dependency confined to the layer); bags fixed as a list
+  of sets of names. An edge-list fallback was offered and not taken.
+- Behavior notes: the loop evaluates W at z=k+1, so with no earlier fort the trivial fort V is
+  added (paper-faithful) and every run on n≥1 returns ≥1 fort; `arcs` order is sorted by tail,
+  not chain order. Full contract and proofs-of-behavior: [SPEC-v1.md](SPEC-v1.md) §7.
