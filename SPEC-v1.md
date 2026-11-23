@@ -30,6 +30,13 @@ The core stays exactly as it is — no validation, no try/except, no raise insid
 modules; the only raise in the package is the layer's gate. (c) Examples/guarantee-display
 extras are deferred to the owner's Jupyter-notebook phase.
 
+**Round 16 (2026-11-23), owner ruling.** The outside API requires a **connected** graph (the
+paper's own assumption, tex:L822): `_is_connected(graph) -> bool` joins the layer gate and the
+call halts with `ValueError` on a disconnected graph. Disconnected/edgeless examples are removed
+from the presentation materials. The core is untouched: it still trusts its inputs and still
+handles disconnected graphs correctly if called directly (the relaxation of rounds 1–5 stands
+inside the core).
+
 ---
 
 ## 1. Review of SPEC v0 (Step 1)
@@ -128,7 +135,7 @@ see §5.1 and §7. Class names `Graph`, `Arcs`, `NicePathDecomposition`, `ZFResu
 ```
 zf/__init__.py        # exports ONLY zf_via_path_decomp (the outside API, from zf/api.py)
 zf/api.py             # outside API: zf_via_path_decomp(graph, bags), ZFResult (names),
-                      #   _is_path_decomp (gate), _to_nice (nicification)
+                      #   _is_connected + _is_path_decomp (gates), _to_nice (nicification)
 zf/graph.py           # Graph                      (internal)
 zf/arcs.py            # Arcs                       (internal)
 zf/path_decomp.py     # NicePathDecomposition      (internal; was decomposition.py)
@@ -331,15 +338,17 @@ The only section an outside caller needs. The internal core (§5) is unchanged.
 **`zf.zf_via_path_decomp(graph, bags)`** — the only package export (`__all__`).
 Zero forcing via a path decomposition (the approximation algorithm of arXiv:2402.08866v1).
 
-- `graph`: a `networkx.Graph` — simple, undirected; its nodes are the vertex names
-  (distinct, sortable; isolated vertices included).
+- `graph`: a `networkx.Graph` — simple, undirected, **connected** (round 16); its nodes are
+  the vertex names (distinct, sortable). The null graph and a single vertex are accepted
+  (vacuously connected).
 - `bags`: a list of sets of vertex names forming a path decomposition of `graph`:
   (D1) every edge has both endpoints in some bag; (D2) each vertex's bags are contiguous;
   every vertex lies in some bag. The bags need **not** be nice.
-- **Input gate (owner ruling, round 11):** the layer checks the bags with
-  `_is_path_decomp(graph, bags) -> bool` (bag elements are vertices; coverage; D1; D2) and
-  **halts immediately with `ValueError`** when False. The core itself still trusts its
-  inputs — the gate lives only in the layer, and it is the only `raise` in the package.
+- **Input gates (owner rulings, rounds 11 and 16):** the layer checks
+  `_is_connected(graph) -> bool` (DFS reachability; no networkx import) and
+  `_is_path_decomp(graph, bags) -> bool` (bag elements are vertices; coverage; D1; D2), and
+  **halts immediately with `ValueError`** when either is False. The core itself still trusts
+  its inputs — the gates live only in the layer, and they are the only `raise`s in the package.
 - Returns a frozen **`ZFResult`** (defined in `zf/api.py`) in the **original names**:
   - `zf_set: tuple` of names, sorted — a zero forcing set `S`;
   - `forts: tuple[frozenset]` of names — the fort packing `F`, in discovery order;
@@ -361,7 +370,8 @@ r.arcs      # (('a', 'b'), ('b', 'c'))
 ### 7.2 Translation layer (`zf/api.py`)
 
 The only place that touches external formats. Steps:
-1. **Gate:** `_is_path_decomp(graph, bags)`; on False, raise `ValueError` and stop.
+1. **Gates:** `_is_connected(graph)` (round 16) and `_is_path_decomp(graph, bags)`;
+   on False, raise `ValueError` and stop.
 2. `Graph(graph.nodes, graph.edges)` — reuses the core's sorted name↔index bijection.
    The layer **never imports networkx** (it reads `.nodes`/`.edges`): `import zf`
    stays standard-library-only; networkx is needed only to construct inputs.
@@ -392,7 +402,7 @@ The only place that touches external formats. Steps:
 - The nice-ified decomposition need not equal a hand-made one; `S`, forts, and arcs can
   differ between valid decompositions — the guarantee holds for all of them.
 
-### 7.4 Recorded behavior notes (rounds 9, 11)
+### 7.4 Recorded behavior notes (rounds 9, 11, 16)
 
 - The loop evaluates `W` at `z = k+1` (tex:L639–642). If no fort was found earlier (`t = 0`),
   then `W = white(∅, G) = V`, so the trivial fort `V` is added and the final `A.reverse()`
@@ -415,3 +425,9 @@ The only place that touches external formats. Steps:
   need a different traversal and region bookkeeping (a different algorithm), not a rename.
 - Extras (more examples, guarantee display) are deferred to the owner's Jupyter-notebook
   presentation phase (round 11); not built now.
+- Connectedness (round 16): before the ruling, disconnected inputs were accepted and handled
+  correctly (nicification passes through an empty bag between components; forts per component;
+  the guarantee holds — demonstrated by the two-triangles and two-isolates cases, since
+  removed from the presentation). The layer now enforces the paper's connectedness assumption
+  (tex:L822); the empty-intersection nicification path remains reachable only by calling the
+  internal core directly.

@@ -21,7 +21,7 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   guide at the top, plain self-contained items, no verification busywork. The owner is the
   paper's author — never ask him to confirm facts from his own paper; resolve and record them.
 
-## 2. Current status (rounds 1–5, 9–14; 2026-11-20/23)
+## 2. Current status (rounds 1–5, 9–16; 2026-11-20/23)
 
 **Done and verified:**
 - Lean core `zf/` (core ~370 lines, 6 modules; round 9 adds the 98-line `api.py` layer),
@@ -68,6 +68,9 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   error about ZF sets ignored per owner instruction (presentation only).
 - Round 14 (2026-11-23): **owner's graph H** added as case cell 6 (bags verbatim, already
   nice); figure `docs/demo_H.png`; S=(1,3,6,10,11), three forts, guarantee 5 ≤ 9.
+- Round 16 (2026-11-23): **connectedness gate** (owner ruling) — `_is_connected` in the layer
+  halts with `ValueError` on disconnected graphs (paper assumption tex:L822); core untouched;
+  disconnected examples removed from snippets and demo.
 - Docs: `SPEC-v1.md` (living spec, lean contract), `docs/definitions.md` (all math definitions,
   one per line), `docs/closure-review.md` (B-F-H comparison), `REPORT.md` (rounds 1–5, 9).
 - Backup: `zf-round2-backup.zip` = round-2 defensive core + 112-test suite + examples + README,
@@ -205,6 +208,13 @@ Item 3 (extras) deferred to your Jupyter-notebook phase. Names refactored per yo
 >   were already committed at `18edf22`; nothing of the agent's was uncommitted (only the
 >   owner's AGENTS.md edit and the untracked reference files, both left as-is by ruling).
 
+**Owner ruling given in chat 2026-11-23 (late), recorded by the agent (round 16):**
+
+> - "What happen when the input graph is disconnected? … I do not want that, should we rule
+>   out the case (again, of course, outside of the core) of disconnected graph" — implemented:
+>   `_is_connected` gate in the layer, `ValueError` halt; core untouched. Disconnected examples
+>   (two triangles, two isolates) removed from the presentation snippets and the demo HTML.
+
 ## 7. Pointers
 
 - **Presentation (rounds 12–13): `docs/presentation_snippets.py`** — copy-paste Jupyter cells:
@@ -272,9 +282,11 @@ caller supplies bags, building one from a graph is out of scope unless asked). P
   from `zero_forcing_set` in round 11). `graph` is a
   `networkx.Graph` (simple, undirected; nodes = vertex names); `bags` is a list of sets of
   names forming a path decomposition (D1/D2 + every vertex in some bag; not necessarily nice).
-- **Input gate (round 11):** `_is_path_decomp(graph, bags) -> bool` checks bag elements are
-  vertices, coverage, D1, D2; the public call halts with `ValueError` when False. This is the
-  only `raise` in the package; the five core modules remain try/except/raise-free.
+- **Input gates (rounds 11, 16):** `_is_connected(graph) -> bool` (round 16: the outside API
+  requires a connected graph, the paper's assumption; null/single-vertex vacuously connected)
+  and `_is_path_decomp(graph, bags) -> bool` (bag elements are vertices, coverage, D1, D2);
+  the public call halts with `ValueError` when either is False. These are the only `raise`s in
+  the package; the five core modules remain try/except/raise-free.
 - Returns a frozen `ZFResult` (in `zf/api.py`) **in the original names**: `zf_set` (tuple of
   names, sorted), `forts` (tuple of frozensets of names, in discovery order), `arcs` (tuple of
   `(name, name)` pairs, sorted by tail).

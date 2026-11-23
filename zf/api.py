@@ -3,9 +3,10 @@
 The only place that touches external formats (HANDOFF.md section 8,
 SPEC-v1.md section 7). The outside gives a NetworkX graph (its nodes are
 the vertex names) and a list of bags (sets of names) forming a path
-decomposition — not necessarily nice. This layer CHECKS that the bags
-really are a path decomposition (_is_path_decomp; owner ruling round 11)
-and halts with ValueError if not; then it translates both inputs to the
+decomposition — not necessarily nice. This layer CHECKS that the graph is
+connected (_is_connected, owner ruling round 16) and that the bags really
+are a path decomposition (_is_path_decomp, owner ruling round 11), halting
+with ValueError if either fails; then it translates both inputs to the
 internal index-based objects, makes the decomposition nice, runs the
 unchanged core, and translates the answer back to the original names.
 
@@ -40,6 +41,33 @@ class ZFResult:
     zf_set: Tuple[Any, ...]
     forts: Tuple[FrozenSet[Any], ...]
     arcs: Tuple[Tuple[Any, Any], ...]
+
+
+def _is_connected(graph):
+    """True iff graph is connected (vacuously True for 0 or 1 vertices).
+
+    Layer-level check (owner ruling, round 16): the outside API requires a
+    connected graph, as the paper does (tex:L822). The core itself still
+    trusts its inputs and handles disconnected graphs if called directly.
+    Depth-first reachability over the edge list; no networkx import.
+    """
+    nodes = set(graph.nodes)
+    if len(nodes) <= 1:
+        return True
+    adj = {v: [] for v in nodes}
+    for u, v in graph.edges:
+        adj[u].append(v)
+        adj[v].append(u)
+    start = next(iter(nodes))
+    seen = {start}
+    stack = [start]
+    while stack:
+        u = stack.pop()
+        for w in adj[u]:
+            if w not in seen:
+                seen.add(w)
+                stack.append(w)
+    return seen == nodes
 
 
 def _is_path_decomp(graph, bags):
@@ -110,18 +138,23 @@ def zf_via_path_decomp(graph, bags):
     Zero forcing via a path decomposition (the approximation algorithm
     of arXiv:2402.08866v1).
 
-    graph: a networkx.Graph (simple, undirected); its nodes are the
-        vertex names.
+    graph: a networkx.Graph (simple, undirected, CONNECTED); its nodes are
+        the vertex names.
     bags: a list of sets of vertex names forming a path decomposition
         of graph — not necessarily nice; every vertex must lie in some
-        bag. Checked by _is_path_decomp; if the bags are not a path
-        decomposition, the call halts with ValueError.
+        bag. Checked by _is_connected and _is_path_decomp; if the graph is
+        disconnected or the bags are not a path decomposition, the call
+        halts with ValueError.
 
     Returns ZFResult in the original names: zf_set (sorted names),
     forts (frozensets of names), arcs ((name, name) pairs). The returned
     set S satisfies |S| <= (w + 1) * |F|, where w is the width of the
     bags and F the returned fort packing.
     """
+    if not _is_connected(graph):
+        raise ValueError(
+            "graph is not connected; the outside API requires a connected "
+            "graph (the paper's assumption); the core itself trusts inputs")
     if not _is_path_decomp(graph, bags):
         raise ValueError(
             "bags are not a path decomposition of the graph "

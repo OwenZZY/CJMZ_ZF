@@ -1,6 +1,11 @@
-# Report — zf-approx (round 14: 2026-11-23; rounds 9–13: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
+# Report — zf-approx (round 16: 2026-11-23; rounds 9–15: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
 
-**What you need to read: nothing — no pending decisions.** Round 14 (2026-11-23): your graph H
+**What you need to read: nothing — no pending decisions.** Round 16 (2026-11-23): per your
+ruling, the outside API now **requires a connected graph** — `_is_connected` joins the layer
+gate and halts with `ValueError` on disconnected input (the paper's own assumption, tex:L822);
+the core is untouched and still handles disconnected graphs if called directly. The
+disconnected examples (two triangles, two isolates) are removed from the snippets and the demo.
+Round 14 (2026-11-23): your graph H
 (11 vertices, 12 edges, bags already nice) added as case cell 6 in
 [docs/presentation_snippets.py](docs/presentation_snippets.py), with layout and figure
 [docs/demo_H.png](docs/demo_H.png). Result: S=(1,3,6,10,11), forts [1,2], [4,5,6,7], [10,11],
@@ -59,6 +64,19 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
 
 ## 2. What is done
 
+- **Round 16 (2026-11-23): connectedness gate (owner ruling).**
+  `_is_connected(graph) -> bool` in [zf/api.py](zf/api.py) (DFS reachability over the edge
+  list; no networkx import; null graph and single vertex vacuously connected); the public call
+  halts with `ValueError` on a disconnected graph, before the path-decomposition gate. The
+  core is untouched — it still trusts its inputs and still handles disconnected graphs
+  correctly if called directly (verified previously: per-component forts, guarantee holds).
+  Presentation cleanup per your "I do not want that": the two-triangles and two-isolates cells
+  removed from [docs/presentation_snippets.py](docs/presentation_snippets.py) (now four cells:
+  setup, house, C5, H), their figures deleted, and the two disconnected cards removed from
+  [docs/pipeline-demo.html](docs/pipeline-demo.html) (gate texts updated). Verified: four
+  disconnected shapes halt (two triangles, two isolates, isolate+edge, two edges with perfect
+  nice bags); connected cases pass; randomized connected invariant trials and disconnected
+  halt trials re-run; all snippet cells re-executed.
 - **Round 14 (2026-11-23): owner's graph H as a case cell.**
   [docs/presentation_snippets.py](docs/presentation_snippets.py) cell 6: H and its bag list
   verbatim as the owner gave them, plus a planar layout, run, print, and `present`. Verified:

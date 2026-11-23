@@ -61,34 +61,7 @@ w = max(map(len, bags)) - 1
 print(f"guarantee: |S| = {len(r.zf_set)} <= ({w}+1)*{len(r.forts)} = {(w+1)*len(r.forts)}")
 present(G, pos, r)
 
-# %% [4] Case: two triangles — disconnected (demo §5)
-G = nx.Graph()
-G.add_edges_from([("a", "b"), ("b", "c"), ("a", "c"),
-                  ("d", "e"), ("e", "f"), ("d", "f")])
-pos = {"a": (0, 1), "b": (1, 1), "c": (0.5, 0),
-       "d": (2.5, 1), "e": (3.5, 1), "f": (3, 0)}
-bags = [{"a", "b"}, {"a", "b", "c"}, {"b", "c"},
-        {"d", "e"}, {"d", "e", "f"}, {"e", "f"}]    # width 2; empty bag between components
-
-r = zf.zf_via_path_decomp(G, bags)
-print("S =", r.zf_set, "| forts =", [sorted(f) for f in r.forts], "| arcs =", r.arcs)
-w = max(map(len, bags)) - 1
-print(f"guarantee: |S| = {len(r.zf_set)} <= ({w}+1)*{len(r.forts)} = {(w+1)*len(r.forts)}")
-present(G, pos, r)
-
-# %% [5] Case: two isolates — edgeless (demo §5)
-G = nx.Graph()
-G.add_nodes_from(["a", "b"])
-pos = {"a": (0, 0), "b": (1, 0)}
-bags = [{"a"}, {"b"}]                               # width 0; each isolate its own fort
-
-r = zf.zf_via_path_decomp(G, bags)
-print("S =", r.zf_set, "| forts =", [sorted(f) for f in r.forts], "| arcs =", r.arcs)
-w = max(map(len, bags)) - 1
-print(f"guarantee: |S| = {len(r.zf_set)} <= ({w}+1)*{len(r.forts)} = {(w+1)*len(r.forts)}")
-present(G, pos, r)
-
-# %% [6] Case: the owner's graph H — 11 vertices, bags already nice
+# %% [4] Case: the owner's graph H — 11 vertices, bags already nice
 H = nx.Graph()
 
 E = [(1,2), (2,3), (1,3),
