@@ -1,6 +1,11 @@
-# Report — zf-approx (round 10: 2026-11-23; round 9: 2026-11-21; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
+# Report — zf-approx (round 11: 2026-11-23; rounds 9–10: 2026-11-21/23; rounds 1–5: 2026-11-20/21; rounds 6–8: see HANDOFF.md)
 
-**What you need to read: nothing — no pending decisions.** Round 10 (2026-11-23): the requested
+**What you need to read: nothing — no pending decisions.** Round 11 (2026-11-23): your naming
+requests and the input gate are implemented — public function `zf.zf_via_path_decomp(graph, bags)`,
+modules `path_decomp.py` / `zf_closure.py` / `alg_core.py`, and `_is_path_decomp` in the layer
+halting with `ValueError` when the bags are not a path decomposition; the core is untouched.
+Point 3 is closed as none; extras are deferred to your notebook phase.
+Round 10 (2026-11-23): the requested
 visual demonstration — [docs/pipeline-demo.html](docs/pipeline-demo.html), a self-contained
 figure of the whole one-way procedure (input → translation layer → core loop → names-based
 result), every state traced from the shipped code. Open it in a browser.
@@ -23,15 +28,37 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
 
 ## 1. What needs to be done (by whom)
 
-- **Nothing required.** Round 9 (outside API) is complete and verified; rounds 1–5 were
-  already complete (rounds 6–8: see [HANDOFF.md](HANDOFF.md)).
-- Optional, owner: API point 3 (never stated — fold in whenever given); the name proposal in
-  [SPEC-v1.md](SPEC-v1.md) §4 before a public release (default: keep the names).
-- Out of scope unless you ask: building a path decomposition from a graph (pathwidth) —
-  your API point 2, default stands; more worked examples; displaying the guarantee.
+- **Nothing required.** Round 11 (renames + input gate) is complete and verified; rounds 1–5
+  and 9–10 were already complete (rounds 6–8: see [HANDOFF.md](HANDOFF.md)).
+- Optional, owner: the name proposal in [SPEC-v1.md](SPEC-v1.md) §4 before a public release
+  (default: keep the names); `graph.py`/`arcs.py` could also take a `zf_` prefix if you prefer
+  uniformity (agent recommendation: keep them generic — they are general-purpose structures).
+- Deferred by you (round 11): more worked examples and the guarantee display — to your
+  Jupyter-notebook presentation phase. Out of scope unless you ask: building a path
+  decomposition from a graph (pathwidth — your API point 2, default stands).
 
 ## 2. What is done
 
+- **Round 11 (2026-11-23): renames + input gate (owner request; answers in HANDOFF §6).**
+  Modules renamed with `git mv` (history preserved): `decomposition.py` →
+  [zf/path_decomp.py](zf/path_decomp.py) (Python module names are identifiers — lowercase with
+  underscores; a hyphen cannot be imported), `closure.py` → [zf/zf_closure.py](zf/zf_closure.py),
+  `algorithm.py` → [zf/alg_core.py](zf/alg_core.py). Public function `zero_forcing_set` →
+  **`zf_via_path_decomp`** (says "zero forcing via path decomposition"; the old name said
+  nothing about the pd); internal loop function → `zf_core`. `graph.py`/`arcs.py` kept generic
+  (general-purpose structures; offer to rename stands). Class names unchanged.
+  **Input gate:** `_is_path_decomp(graph, bags) -> bool` in [zf/api.py](zf/api.py) checks bag
+  elements are vertices, every vertex covered, D1 edge coverage, D2 contiguity; the public call
+  halts with `ValueError` on False (your "halt immediately"). The core is untouched — still
+  zero try/except/raise in the five core modules; the gate is the only raise in the package.
+  [examples.py](examples.py) imports updated; [SPEC-v1.md](SPEC-v1.md) §§4–7 and
+  [HANDOFF.md](HANDOFF.md) §6/§8 updated; [docs/pipeline-demo.html](docs/pipeline-demo.html)
+  updated (names, gate, file map) and an index/name mix-up in its nice-bag timeline fixed.
+  Point 3 closed as none (you do not recognize it; origin explained in HANDOFF §6).
+  Verification (throwaway, deleted): 250 nice-input parity trials, 250 coarse-PD invariant
+  trials vs brute-force Z(G), 125 invalid-input halts (random mutations + the two historically
+  invalid inputs: non-contiguous triangle bags, K4 bags missing edge 0-3); examples pass;
+  `import zf` still stdlib-only. v0.3.0.
 - **Round 10 (2026-11-23): visual pipeline demonstration (owner request).**
   [docs/pipeline-demo.html](docs/pipeline-demo.html) — self-contained HTML + inline SVG, no
   dependencies, opens in any browser. §0: the whole pipeline in one figure (names → indices →
@@ -181,18 +208,28 @@ auditing). Deliverables: [SPEC-v1.md](SPEC-v1.md), [docs/definitions.md](docs/de
 - Input suitability = D1–D4 + every vertex in some bag (the caller's responsibility; the lean
   core does not check it — round-3 ruling); this is weaker than the paper's connectedness
   assumption, so edgeless/disconnected graphs also work.
-- **Outside API (decided 2026-11-21, owner; implemented round 9):** one public function
-  `zf.zero_forcing_set(graph, bags)` (NetworkX graph + list of bags, not necessarily nice);
-  frozen names-based result (`zf_set`, `forts`, `arcs`); the translation layer trusts
-  suitable inputs (no validation) and contains the PD→nice-PD function (`_to_nice`,
-  forget-first, width-preserving). Building a decomposition from a graph (pathwidth) is out
-  of scope unless asked (owner API point 2 = HANDOFF §4.2). Point 3 not stated. Contract:
-  [SPEC-v1.md](SPEC-v1.md) §7; answers: [HANDOFF.md](HANDOFF.md) §6.
+- **Outside API (decided 2026-11-21, owner; implemented round 9; renamed + gated round 11):**
+  one public function `zf.zf_via_path_decomp(graph, bags)` (NetworkX graph + list of bags, not
+  necessarily nice); frozen names-based result (`zf_set`, `forts`, `arcs`); the translation
+  layer contains the PD→nice-PD function (`_to_nice`, forget-first, width-preserving) and,
+  since round 11, the input gate `_is_path_decomp` (halt with `ValueError` on False — the only
+  raise in the package; the core still trusts its inputs). Building a decomposition from a
+  graph (pathwidth) is out of scope unless asked (owner API point 2 = HANDOFF §4.2). Point 3
+  closed as none (round 11). Contract: [SPEC-v1.md](SPEC-v1.md) §7; answers:
+  [HANDOFF.md](HANDOFF.md) §6.
 - The whole algorithm is deterministic (the forcing-order canon is the min-index ruling
   above; the round-1 FIFO queue was superseded in round 2).
 
 ## 4. Agent findings (informational — no need to read unless auditing)
 
+- **Round 11: path vs tree decomposition (your question).** `NicePathDecomposition` is
+  path-specific: `ops` is a linear sequence and the loop's regions `X_t^z` are intervals of it;
+  Algorithm 1 is stated for path decompositions. A tree decomposition would need a different
+  traversal and region bookkeeping — a different algorithm, not a rename. Recorded in
+  SPEC-v1 §7.4.
+- **Round 11: demo bug found and fixed while updating.** The nice-bag timeline in
+  [docs/pipeline-demo.html](docs/pipeline-demo.html) showed index bags under name op badges;
+  now consistently in names. All other panels were already name-based.
 - **Round 9: forget-first nice-ification is forced, not a preference.** Introducing before
   forgetting can inflate an intermediate bag to |X_i ∪ X_{i+1}| (e.g. {a,b}→{c,d} at width 1
   would pass through a 3-vertex bag); forgetting first keeps every intermediate bag a subset

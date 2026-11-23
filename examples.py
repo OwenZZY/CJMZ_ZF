@@ -1,7 +1,7 @@
 """Explicit worked examples.  Run:  python3 examples.py
 
 These examples exercise the INTERNAL core directly (submodule imports);
-the single outside interface is zf.zero_forcing_set (networkx graph +
+the single outside interface is zf.zf_via_path_decomp (networkx graph +
 list of bags; see SPEC-v1.md section 7).
 
 Graphs are built with external names; the core works on 0-based indices
@@ -12,9 +12,9 @@ to fixation (closure); its complement is the white set.
 
 from zf.arcs import Arcs
 from zf.graph import Graph
-from zf.decomposition import NicePathDecomposition
-from zf.closure import closure
-from zf.algorithm import zero_forcing_set
+from zf.path_decomp import NicePathDecomposition
+from zf.zf_closure import closure
+from zf.alg_core import zf_core
 
 
 def is_fort(graph, fort):
@@ -42,7 +42,7 @@ def show_closure(title, graph, blue_names):
 
 
 def show_algorithm(title, graph, pd):
-    r = zero_forcing_set(graph, pd)
+    r = zf_core(graph, pd)
     print(title)
     print(f"  zero forcing set S (names): {graph.to_names(r.zf_set)}")
     print(f"  fort packing F (names):     {[graph.to_names(sorted(f)) for f in r.forts]}")

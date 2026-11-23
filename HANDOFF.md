@@ -21,7 +21,7 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
   guide at the top, plain self-contained items, no verification busywork. The owner is the
   paper's author — never ask him to confirm facts from his own paper; resolve and record them.
 
-## 2. Current status (rounds 1–5, 9, 10; 2026-11-20/23)
+## 2. Current status (rounds 1–5, 9–11; 2026-11-20/23)
 
 **Done and verified:**
 - Lean core `zf/` (core ~370 lines, 6 modules; round 9 adds the 98-line `api.py` layer),
@@ -51,6 +51,12 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
 - Round 10 (2026-11-23): **visual demonstration** (owner request) — `docs/pipeline-demo.html`:
   the one-way pipeline as a figure (input → layer → loop → names-based result), all states
   traced from the shipped code; house-graph walkthrough + C5/disconnected/isolate cards.
+- Round 11 (2026-11-23): **renames + input gate** (owner request) — modules `path_decomp.py`,
+  `zf_closure.py`, `alg_core.py`; public function `zf_via_path_decomp` (internal `zf_core`);
+  `_is_path_decomp` gate in the layer halts with `ValueError` on non-path-decomposition bags;
+  core math untouched. Demo HTML updated (names, gate, file map; fixed an index/name mix-up
+  in the nice-bag timeline). Verified: 250 parity + 250 invariant trials, 125 invalid-input
+  halts. Point 3 closed as none; extras deferred to the notebook phase.
 - Docs: `SPEC-v1.md` (living spec, lean contract), `docs/definitions.md` (all math definitions,
   one per line), `docs/closure-review.md` (B-F-H comparison), `REPORT.md` (rounds 1–5, 9).
 - Backup: `zf-round2-backup.zip` = round-2 defensive core + 112-test suite + examples + README,
@@ -83,6 +89,9 @@ at `76700f8`; the round-9 outside API is committed on top (local, not pushed —
 **Round-9 status (2026-11-21):** item 1 done — scope confirmed by your answers (§6), API frozen
 and implemented (§8). Items 2–4: defaults stand (you did not ask). Item 5 done this round.
 Item 6 closed (numbering correct).
+**Round-11 status (2026-11-23):** item 2 refined — bags are forced to be a path decomposition
+via the layer gate (`_is_path_decomp`); pathwidth construction still out unless asked.
+Item 3 (extras) deferred to your Jupyter-notebook phase. Names refactored per your request (§6).
 
 1. **One function for the outside.** Today the package exposes several names (`Graph`, `Arcs`,
    `NicePathDecomposition`, `closure`, `zero_forcing_set`, `ZFResult`). You asked for a single
@@ -149,6 +158,31 @@ Item 6 closed (numbering correct).
 >     explicit function turning a path decomposition into a nice one. Implemented as
 >     `_to_nice` in `zf/api.py` (round 9).
 
+**Owner answers given in chat 2026-11-23, recorded by the agent (round 11):**
+
+> - Naming: `zero_forcing_set` is "way too general as a noun … does not say anything about
+>   the pd part"; `graph`/`decomposition`/`closure` "have no connection with zero forcing".
+>   Requested: `decomposition.py` → "path decomp.py" (agent applied Python identifier rules:
+>   `path_decomp.py`), `closure.py` → `zf_closure.py`, `algorithm.py` → `alg_core.py`,
+>   `zero_forcing_set()` → a name saying "via path decomposition" (agent chose
+>   `zf_via_path_decomp`; internal loop function `zf_core`). `graph.py`/`arcs.py` kept
+>   generic (general-purpose structures) — offered to rename on request.
+> - Validation (supersedes the round-9 trust default FOR THE LAYER): "we will force the user
+>   to enter a path decomposition and nic-ify it … another layer: to test whether the input
+>   bags makes up a path decomposition, something like `_is_path_decomp` returning true or
+>   false, and halt immediately when it is not." Implemented: `_is_path_decomp` in
+>   `zf/api.py`; the public call raises `ValueError` on False. "Leave the core as it is, and
+>   make sure the math part is understood by mathematicians" — core untouched (still zero
+>   try/except/raise; paper notation and L-line comments kept).
+> - Extras: "leave it for now" — more examples / guarantee display deferred to the owner's
+>   Jupyter-notebook presentation of the paper.
+> - Point 3: owner does not recognize it ("I do not see what is it referring to") — closed
+>   as none; nothing pending. (Origin: round-8 chat apparently numbered API remarks; only
+>   point 1 was recorded, point 2 identified in round 9, point 3 never stated.)
+> - Tree-decomposition question ("or it really can be a tree decomposition right?"):
+>   answered — the object and Algorithm 1 are path-specific (linear ops, interval regions);
+>   a tree decomposition would be a different algorithm, not a rename. See SPEC-v1 §7.4.
+
 ## 7. Pointers
 
 - **Visual demo (round 10): `docs/pipeline-demo.html`** — the whole one-way procedure as a
@@ -198,18 +232,23 @@ I will switch. Otherwise NetworkX stands. The bags are fixed as a **list of sets
    properties. (Standard "nice-ification"; the paper cites Bodlaender–Kloks, Lemma 13.1.3.)
 3. Run the core; translate the result back to names.
 
-**Decided (owner, 2026-11-21 — §6):** the layer does **not** check suitability; it trusts
-suitable inputs, consistent with the core. It **must contain an explicit function that makes a
-path decomposition nice** — implemented as `_to_nice` in `zf/api.py`.
+**Decided (owner, 2026-11-21 — §6):** the layer **must contain an explicit function that makes
+a path decomposition nice** — implemented as `_to_nice` in `zf/api.py`.
+**Superseded in part (owner, 2026-11-23 — round 11):** the layer now also **checks** the bags
+(`_is_path_decomp`, halt with `ValueError` on False); the core still trusts its inputs.
 
 **Owner API points 2 and 3:** point 2 = §4.2 (decomposition provenance; default stands: the
-caller supplies bags, building one from a graph is out of scope unless asked). Point 3: not
-stated; fold in when given.
+caller supplies bags, building one from a graph is out of scope unless asked). Point 3:
+**closed round 11** — the owner does not recognize it; recorded as none.
 
-**Implemented (round 9) — the frozen contract:**
-- `zf.zero_forcing_set(graph, bags)` is the only export (`zf/__init__.py`). `graph` is a
+**Implemented (rounds 9–11) — the frozen contract:**
+- `zf.zf_via_path_decomp(graph, bags)` is the only export (`zf/__init__.py`, v0.3.0; renamed
+  from `zero_forcing_set` in round 11). `graph` is a
   `networkx.Graph` (simple, undirected; nodes = vertex names); `bags` is a list of sets of
   names forming a path decomposition (D1/D2 + every vertex in some bag; not necessarily nice).
+- **Input gate (round 11):** `_is_path_decomp(graph, bags) -> bool` checks bag elements are
+  vertices, coverage, D1, D2; the public call halts with `ValueError` when False. This is the
+  only `raise` in the package; the five core modules remain try/except/raise-free.
 - Returns a frozen `ZFResult` (in `zf/api.py`) **in the original names**: `zf_set` (tuple of
   names, sorted), `forts` (tuple of frozensets of names, in discovery order), `arcs` (tuple of
   `(name, name)` pairs, sorted by tail).
@@ -222,6 +261,7 @@ stated; fold in when given.
   (D3 relaxed). The core replays ops without D3 checks and handles this correctly (verified).
 - The layer never imports networkx: it reads `graph.nodes` / `graph.edges` (trusted, duck-typed),
   so `import zf` stays standard-library-only; networkx is needed only to construct inputs.
-- The core (`zf/graph.py`, `arcs.py`, `decomposition.py`, `closure.py`, `algorithm.py`) is
-  unchanged; helpers remain importable from their modules but are no longer package exports.
-  `examples.py` now imports them from the submodules.
+- The core (`zf/graph.py`, `arcs.py`, `path_decomp.py`, `zf_closure.py`, `alg_core.py`; the
+  last three renamed in round 11 from `decomposition.py`, `closure.py`, `algorithm.py`) is
+  unchanged mathematically; helpers remain importable from their modules but are not package
+  exports. `examples.py` imports them from the submodules.

@@ -20,14 +20,14 @@ from dataclasses import dataclass
 from typing import Tuple, FrozenSet
 
 from .arcs import Arcs
-from .closure import closure
-from .decomposition import NicePathDecomposition
+from .zf_closure import closure
+from .path_decomp import NicePathDecomposition
 from .graph import Graph
 
 
 @dataclass(frozen=True)
 class ZFResult:
-    """Output of :func:`zero_forcing_set`.
+    """Output of :func:`zf_core`.
 
     zf_set: sorted tuple of vertex indices forming a zero forcing set S.
     forts: the fort packing F; pairwise disjoint frozensets of indices.
@@ -39,7 +39,7 @@ class ZFResult:
     arcs: Arcs
 
 
-def zero_forcing_set(graph: Graph, pd: NicePathDecomposition) -> ZFResult:
+def zf_core(graph: Graph, pd: NicePathDecomposition) -> ZFResult:
     """Return a zero forcing set and a fort packing of ``graph``.
 
     Algorithm 1 of arXiv:2402.08866v1 on the nice path decomposition ``pd``.

@@ -18,9 +18,17 @@ round-2 state (defensive core, tests, examples, README) is preserved verbatim in
 `zf-round2-backup.zip`.
 
 **Round 9 (2026-11-21), owner ruling.** The outside API is frozen and implemented (§7): one
-public function `zero_forcing_set(graph, bags)` (NetworkX graph + list of bags), a names-based
-result object, and a translation layer that trusts suitable inputs and makes the decomposition
-nice. The internal core (§5) is unchanged.
+public function (NetworkX graph + list of bags), a names-based result object, and a translation
+layer that makes the decomposition nice. The internal core (§5) is unchanged.
+
+**Round 11 (2026-11-23), owner rulings.** (a) Renames: `decomposition.py` → `path_decomp.py`,
+`closure.py` → `zf_closure.py`, `algorithm.py` → `alg_core.py`; the public function is
+`zf_via_path_decomp(graph, bags)` (the old name `zero_forcing_set` said nothing about the path
+decomposition); the internal loop function is `zf_core`. (b) The layer **checks** the bags:
+`_is_path_decomp(graph, bags) -> bool`, and the public call halts with `ValueError` when False.
+The core stays exactly as it is — no validation, no try/except, no raise inside the core
+modules; the only raise in the package is the layer's gate. (c) Examples/guarantee-display
+extras are deferred to the owner's Jupyter-notebook phase.
 
 ---
 
@@ -101,6 +109,8 @@ built; the loop only ever (i) advances `z` by one op, (ii) occasionally calls `c
 ## 4. Name proposal (Step 3.1)
 
 Public GitHub release; repo `zf-approx`, package `zf` (as in the v0 title). Stdlib only.
+*(Historical round-1 proposal; module/function names superseded by the round-11 renames —
+see §5.1 and §7. Class names `Graph`, `Arcs`, `NicePathDecomposition`, `ZFResult` stand.)*
 
 | v0 / paper | proposed | note |
 |---|---|---|
@@ -116,13 +126,14 @@ Public GitHub release; repo `zf-approx`, package `zf` (as in the v0 title). Stdl
 ### 5.1 File layout
 
 ```
-zf/__init__.py        # exports ONLY zero_forcing_set (the outside API, from zf/api.py)
-zf/api.py             # outside API: zero_forcing_set(graph, bags), ZFResult (names), _to_nice
+zf/__init__.py        # exports ONLY zf_via_path_decomp (the outside API, from zf/api.py)
+zf/api.py             # outside API: zf_via_path_decomp(graph, bags), ZFResult (names),
+                      #   _is_path_decomp (gate), _to_nice (nicification)
 zf/graph.py           # Graph                      (internal)
 zf/arcs.py            # Arcs                       (internal)
-zf/decomposition.py   # NicePathDecomposition      (internal)
-zf/closure.py         # closure                    (internal)
-zf/algorithm.py       # zero_forcing_set, ZFResult (internal, index-based)
+zf/path_decomp.py     # NicePathDecomposition      (internal; was decomposition.py)
+zf/zf_closure.py      # closure                    (internal; was closure.py)
+zf/alg_core.py        # zf_core, ZFResult          (internal, index-based; was algorithm.py)
 ```
 
 ### 5.2 Interfaces (shared API — fixed)
@@ -195,7 +206,7 @@ no exceptions raised.** Suitability is the caller's responsibility.
 - `white(S, H)` and `fas(S, H)` of the paper are the two projections of `closure`; with the [L6c]
   trick, `H` is always the full `G` and `S` is augmented by all vertices outside the region.
 
-**`zero_forcing_set(graph, pd)`** — Algorithm (L1)–(L8) with the tricks (§5.3).
+**`zf_core(graph, pd)`** (in `zf/alg_core.py`) — Algorithm (L1)–(L8) with the tricks (§5.3).
 - Returns **`ZFResult`** (frozen dataclass): `zf_set: tuple[int, ...]` (sorted `S`),
   `forts: tuple[frozenset[int], ...]` (the packing `F`), `arcs: Arcs` (final `A`, `sources == S`).
 
@@ -293,7 +304,8 @@ L8  return ZFResult(tuple(A.sources()), tuple(forts), A)   # L5 once, at the end
    mathematical changes. `n=0` gives `k=−1` and the loop body never runs.
    Sign set and offset (round 5): op signs are exactly `{+1, −1}` (introduce / forget) — there is
    no `0` op. Ops are 0-based: op `z−1` produces `X_z` (equivalently, 1-based op `z` produces
-   `X_z`). Audited consistent across `zf/decomposition.py`, `zf/algorithm.py`, and this report;
+   `X_z`). Audited consistent across `zf/path_decomp.py`, `zf/alg_core.py` (named
+   `decomposition.py`/`algorithm.py` at the time of the audit), and this report;
    no off-by-one present.
 5. **Isolated vertices / disconnected graphs.** (D1) alone does not force isolated vertices into
    bags. Resolution: the precise "suitable input" condition is D1–D4 plus every vertex lying in
@@ -310,21 +322,24 @@ L8  return ZFResult(tuple(A.sources()), tuple(forts), A)   # L5 once, at the end
 
 ---
 
-## 7. Outside API (round 9, 2026-11-21 — frozen by owner, implemented)
+## 7. Outside API (round 9 design; round 11 renames + input gate, 2026-11-23)
 
 The only section an outside caller needs. The internal core (§5) is unchanged.
 
 ### 7.1 The single function
 
-**`zf.zero_forcing_set(graph, bags)`** — the only package export (`__all__`).
+**`zf.zf_via_path_decomp(graph, bags)`** — the only package export (`__all__`).
+Zero forcing via a path decomposition (the approximation algorithm of arXiv:2402.08866v1).
 
 - `graph`: a `networkx.Graph` — simple, undirected; its nodes are the vertex names
   (distinct, sortable; isolated vertices included).
 - `bags`: a list of sets of vertex names forming a path decomposition of `graph`:
   (D1) every edge has both endpoints in some bag; (D2) each vertex's bags are contiguous;
   every vertex lies in some bag. The bags need **not** be nice.
-- Suitability is the caller's responsibility (owner ruling, 2026-11-21): the layer trusts
-  suitable inputs exactly as the core does; nothing is validated.
+- **Input gate (owner ruling, round 11):** the layer checks the bags with
+  `_is_path_decomp(graph, bags) -> bool` (bag elements are vertices; coverage; D1; D2) and
+  **halts immediately with `ValueError`** when False. The core itself still trusts its
+  inputs — the gate lives only in the layer, and it is the only `raise` in the package.
 - Returns a frozen **`ZFResult`** (defined in `zf/api.py`) in the **original names**:
   - `zf_set: tuple` of names, sorted — a zero forcing set `S`;
   - `forts: tuple[frozenset]` of names — the fort packing `F`, in discovery order;
@@ -337,7 +352,7 @@ import networkx as nx
 import zf
 
 G = nx.path_graph(["a", "b", "c"])
-r = zf.zero_forcing_set(G, [{"a", "b"}, {"b", "c"}])   # bags need not be nice
+r = zf.zf_via_path_decomp(G, [{"a", "b"}, {"b", "c"}])   # bags need not be nice
 r.zf_set    # ('a',)
 r.forts     # (frozenset({'a', 'b', 'c'}),)  — see §7.4 on the trivial fort
 r.arcs      # (('a', 'b'), ('b', 'c'))
@@ -346,12 +361,13 @@ r.arcs      # (('a', 'b'), ('b', 'c'))
 ### 7.2 Translation layer (`zf/api.py`)
 
 The only place that touches external formats. Steps:
-1. `Graph(graph.nodes, graph.edges)` — reuses the core's sorted name↔index bijection.
-   The layer **never imports networkx** (it reads `.nodes`/`.edges`, trusted): `import zf`
+1. **Gate:** `_is_path_decomp(graph, bags)`; on False, raise `ValueError` and stop.
+2. `Graph(graph.nodes, graph.edges)` — reuses the core's sorted name↔index bijection.
+   The layer **never imports networkx** (it reads `.nodes`/`.edges`): `import zf`
    stays standard-library-only; networkx is needed only to construct inputs.
-2. Bags → index sets → `_to_nice(bags, n)` → `NicePathDecomposition` (§7.3).
-3. Run the unchanged core `zf.algorithm.zero_forcing_set`.
-4. Translate the index result back to names via `Graph.to_names` / `Graph.arcs_to_names`.
+3. Bags → index sets → `_to_nice(bags, n)` → `NicePathDecomposition` (§7.3).
+4. Run the unchanged core `zf.alg_core.zf_core`.
+5. Translate the index result back to names via `Graph.to_names` / `Graph.arcs_to_names`.
 
 ### 7.3 Nice-ification convention (`_to_nice`)
 
@@ -376,7 +392,7 @@ The only place that touches external formats. Steps:
 - The nice-ified decomposition need not equal a hand-made one; `S`, forts, and arcs can
   differ between valid decompositions — the guarantee holds for all of them.
 
-### 7.4 Recorded behavior notes (round 9)
+### 7.4 Recorded behavior notes (rounds 9, 11)
 
 - The loop evaluates `W` at `z = k+1` (tex:L639–642). If no fort was found earlier (`t = 0`),
   then `W = white(∅, G) = V`, so the trivial fort `V` is added and the final `A.reverse()`
@@ -384,5 +400,18 @@ The only place that touches external formats. Steps:
   `n ≥ 1` every run returns at least one fort.
 - API provenance (HANDOFF §6/§8): owner point 1 = the shape (round 8); point 2 =
   decomposition provenance (HANDOFF §4.2) — building a decomposition from a graph
-  (pathwidth) is **out of scope unless asked**: the caller supplies bags, the layer makes
-  them nice. Point 3: not stated; fold in when given.
+  (pathwidth) is **out of scope unless asked**: the caller supplies bags, the layer checks
+  and nicifies them. Point 3: **closed round 11** — the owner does not recognize it; recorded
+  as none, nothing pending.
+- Round 11 naming: the public name says what the method is (`zf_via_path_decomp`); the
+  zf-specific primitive carries the prefix (`zf_closure.py`), the decomposition module is
+  named for its structure (`path_decomp.py`), the loop is `alg_core.py`. `graph.py`/`arcs.py`
+  keep generic names: they are general-purpose structures (a static graph; an arc set with
+  in/out-degree ≤ 1), not zero-forcing-specific. Python module names are identifiers:
+  lowercase with underscores (a hyphen cannot be imported).
+- Path vs tree decomposition (owner question, round 11): `NicePathDecomposition` is
+  path-specific — `ops` is a linear sequence and the loop's regions `X_t^z` are intervals of
+  it; the paper's Algorithm 1 is stated for path decompositions. A tree decomposition would
+  need a different traversal and region bookkeeping (a different algorithm), not a rename.
+- Extras (more examples, guarantee display) are deferred to the owner's Jupyter-notebook
+  presentation phase (round 11); not built now.

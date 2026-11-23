@@ -3,14 +3,17 @@
 The only place that touches external formats (HANDOFF.md section 8,
 SPEC-v1.md section 7). The outside gives a NetworkX graph (its nodes are
 the vertex names) and a list of bags (sets of names) forming a path
-decomposition — not necessarily nice. This layer translates both to the
+decomposition — not necessarily nice. This layer CHECKS that the bags
+really are a path decomposition (_is_path_decomp; owner ruling round 11)
+and halts with ValueError if not; then it translates both inputs to the
 internal index-based objects, makes the decomposition nice, runs the
 unchanged core, and translates the answer back to the original names.
 
-Internal-core rules carry over: inputs are assumed suitable (simple
-undirected graph; bags satisfy D1/D2 and cover every vertex); nothing is
-validated. networkx itself is never imported here — the layer only reads
-graph.nodes and graph.edges — so the package stays standard-library-only.
+The core itself still trusts its inputs: no validation, no try/except,
+no exceptions inside the core modules. The only raise in the package is
+the layer's input halt below. networkx itself is never imported here —
+the layer only reads graph.nodes and graph.edges — so the package stays
+standard-library-only.
 """
 
 from __future__ import annotations
@@ -18,14 +21,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, FrozenSet, Tuple
 
-from .algorithm import zero_forcing_set as _core
-from .decomposition import NicePathDecomposition
+from .alg_core import zf_core as _core
+from .path_decomp import NicePathDecomposition
 from .graph import Graph
 
 
 @dataclass(frozen=True)
 class ZFResult:
-    """Output of the outside :func:`zero_forcing_set`, in original names.
+    """Output of the outside :func:`zf_via_path_decomp`, in original names.
 
     zf_set: tuple of vertex names (sorted) forming a zero forcing set S.
     forts: the fort packing F; pairwise disjoint frozensets of names,
@@ -37,6 +40,34 @@ class ZFResult:
     zf_set: Tuple[Any, ...]
     forts: Tuple[FrozenSet[Any], ...]
     arcs: Tuple[Tuple[Any, Any], ...]
+
+
+def _is_path_decomp(graph, bags):
+    """True iff the bags form a path decomposition of graph.
+
+    Checks the suitability contract, in names: every bag element is a
+    vertex of graph; every vertex lies in some bag; (D1) every edge has
+    both endpoints in a common bag; (D2) each vertex's bags are
+    contiguous. Layer-level check only (owner ruling, round 11) — the
+    core still trusts its inputs.
+    """
+    nodes = set(graph.nodes)
+    bags = [set(b) for b in bags]
+    covered = set()
+    for b in bags:
+        if not b <= nodes:
+            return False
+        covered |= b
+    if covered != nodes:
+        return False
+    for u, v in graph.edges:
+        if not any(u in b and v in b for b in bags):
+            return False
+    for v in nodes:
+        pos = [i for i, b in enumerate(bags) if v in b]
+        if pos != list(range(pos[0], pos[-1] + 1)):
+            return False
+    return True
 
 
 def _to_nice(bags, n):
@@ -73,20 +104,29 @@ def _to_nice(bags, n):
     return NicePathDecomposition(ops, n=n)
 
 
-def zero_forcing_set(graph, bags):
+def zf_via_path_decomp(graph, bags):
     """Return a zero forcing set and a fort packing of ``graph``.
+
+    Zero forcing via a path decomposition (the approximation algorithm
+    of arXiv:2402.08866v1).
 
     graph: a networkx.Graph (simple, undirected); its nodes are the
         vertex names.
     bags: a list of sets of vertex names forming a path decomposition
         of graph — not necessarily nice; every vertex must lie in some
-        bag. Assumed suitable; nothing is validated.
+        bag. Checked by _is_path_decomp; if the bags are not a path
+        decomposition, the call halts with ValueError.
 
     Returns ZFResult in the original names: zf_set (sorted names),
     forts (frozensets of names), arcs ((name, name) pairs). The returned
     set S satisfies |S| <= (w + 1) * |F|, where w is the width of the
     bags and F the returned fort packing.
     """
+    if not _is_path_decomp(graph, bags):
+        raise ValueError(
+            "bags are not a path decomposition of the graph "
+            "(need: bag elements are vertices, every vertex covered, "
+            "D1 edge coverage, D2 contiguity)")
     g = Graph(graph.nodes, graph.edges)
     index_bags = [frozenset(g.index[v] for v in bag) for bag in bags]
     pd = _to_nice(index_bags, g.n)
