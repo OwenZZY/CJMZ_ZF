@@ -69,8 +69,9 @@ Status and history: [REPORT.md](REPORT.md).
   round 9 → `22aadf0` round 10 → `fa1e848` round 11 → `18edf22` round 12 → `c4d093b` round 13 →
   `55ddf70` round 14 → `2f8afc4` round 15 → `868b23f` round 16 → round 17 (this consolidation).
 - Left as-is, never committed by the agent: your [AGENTS.md](AGENTS.md) edit; untracked
-  `SPEC.md` (your v0), `resources/` (the papers), `spec2`, and your `demo.ipynb` /
-  `.ipynb_checkpoints/`.
+  `SPEC.md` (your v0), `resources/` (the papers), `spec2`, and your `demo.ipynb` (owner ruling,
+  round 18: keep untracked — local working file, not a repo deliverable);
+  `.ipynb_checkpoints/` ignored since round 18.
 - No push and no remote change (AGENTS.md rule 7).
 
 ## 4. Optional next items (defaults stand; only on your word)

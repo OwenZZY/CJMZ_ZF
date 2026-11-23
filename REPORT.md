@@ -114,7 +114,8 @@ S; width preserved; determinism. Presentation cells re-executed headlessly each 
   per your instruction; API point 3 closed as none (round 11).
 - **Housekeeping**: no push, no remote changes; `SPEC.md` and `resources/` untouched; your
   uncommitted [AGENTS.md](AGENTS.md) edit and the untracked reference files (`SPEC.md`,
-  `resources/`, `spec2`, your `demo.ipynb`) left as-is.
+  `resources/`, `spec2`) left as-is; your `demo.ipynb` stays untracked by your ruling
+  (round 18); `.ipynb_checkpoints/` ignored.
 - You are the paper's author: nothing here asks you to confirm a fact from your own paper;
   relied-upon statements are cited by tex line in [SPEC-v1.md](SPEC-v1.md) §2.
 
