@@ -132,6 +132,12 @@ commit" — this consolidation.
 picture with the explanation in a legend — implemented as `report(r, bags)` + legend outside
 the axes in `present`, in the snippets and the standalone H file.
 
+**2026-11-24 (round 21).** Copyright ruling: the code is owned **jointly by all paper authors**
+(Cameron, Janssen, Mathew, Zhang — math-style parallel authorship, no first author); the
+`Copyright (c)` line names all authors. The license choice is therefore joint: the owner will
+ask co-authors about MIT; **no LICENSE file until they reply**. README plan: owner adds markdown
+cells to `demo.ipynb` himself, then converts to markdown (`README.md`) / HTML for GitHub.
+
 ## 7. Pointers
 
 - Presentation: [docs/presentation_snippets.py](docs/presentation_snippets.py) (4 cells),
