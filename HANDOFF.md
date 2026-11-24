@@ -64,16 +64,25 @@ Status and history: [REPORT.md](REPORT.md).
 
 ## 3. Git state
 
-- Chain (all local, nothing pushed, no remote changes): `67e8008` baseline → `e965858` chore →
-  `76700f8` core rounds 1–5 → `aa5d70c` handoff → `b53242d` round-8 API design → `88d1196`
-  round 9 → `22aadf0` round 10 → `fa1e848` round 11 → `18edf22` round 12 → `c4d093b` round 13 →
-  `55ddf70` round 14 → `2f8afc4` round 15 → `868b23f` round 16 → round 17 (this consolidation).
+- Chain: `67e8008` baseline → `e965858` chore → `76700f8` core rounds 1–5 → `aa5d70c` handoff →
+  `b53242d` round-8 API design → `88d1196` round 9 → `22aadf0` round 10 → `fa1e848` round 11 →
+  `18edf22` round 12 → `c4d093b` round 13 → `55ddf70` round 14 → `2f8afc4` round 15 →
+  `868b23f` round 16 → `ccac571` round 17 → `e128a12`/`17d6ae1` rounds 18–19 → `0adf056`/`bcef36c`
+  round 20 → `b6f8be0` round 21 → `0bb7c21` round 22 → round 23 (push record).
+- **Pushed (round 23, owner instruction):** this history lives on `origin`
+  (`github.com/OwenZZY/CJMZ_ZF`) as branch **`zf-approx`**; local `main` tracks
+  `origin/zf-approx`. The prototype history remains as remote `main` (`93fbfdb`), untouched.
+  To make `zf-approx` the formal face: GitHub web → Settings → Branches → switch default branch
+  (no `gh` CLI here). Fetch URL stays HTTPS; push URL set to SSH (HTTPS push has no credentials
+  in this environment; SSH key authenticates as OwenZZY).
 - Your [AGENTS.md](AGENTS.md) edit: committed in round 22 per your "commit anyway" instruction
   (it is the working agreement in force). Still untracked, never pushed: `SPEC.md` (your v0),
   `resources/` (the papers — third-party, must stay out), `spec2`, and your `demo.ipynb`
   (owner ruling, round 18: keep untracked — local working file, not a repo deliverable);
   `.ipynb_checkpoints/` ignored since round 18.
-- No push and no remote change (AGENTS.md rule 7).
+- Push policy: pushed only per explicit owner instruction (round 23: branch `zf-approx` on the
+  CJMZ_ZF origin, to become the default/formal branch); never force-push, never touch the
+  prototype `main`. AGENTS.md rule 7's no-push default is superseded by that instruction only.
 
 ## 4. Optional next items (defaults stand; only on your word)
 
@@ -145,6 +154,10 @@ Push target NOT yet decided: `origin` currently points at the parallel project
 repo — do not push to `origin` without an explicit target decision. Conversion tooling: use
 `jupyter nbconvert` (Homebrew, 7.17.2); the system `/usr/bin/python3 -m nbconvert` install is
 broken (traitlets/jupyter_core mismatch, `KeyError: template_paths`).
+
+**2026-11-24 (round 23).** Push target decided: new branch on the CJMZ_ZF origin, to become the
+new formal version — pushed as `zf-approx` (SSH; HTTPS push has no credentials here); prototype
+`main` preserved; default-branch switch is a GitHub web setting. License still out until later.
 
 ## 7. Pointers
 
