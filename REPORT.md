@@ -25,6 +25,17 @@ Earlier versions of this report are in git; round 17 consolidated them.
 
 ## 2. What is done
 
+- **Round 20 (2026-11-24): notebook output format (owner request).** The one-line
+  `S | forts | arcs` print and the in-title explanation are replaced by a `report(r, bags)`
+  helper printing line by line with the guarantee aligned (`S`, `forts`, `arcs`, then
+  `|S|`, `w`, `|F|`, `(w+1)|F|`, and the checked inequality `|S| <= (w+1)|F| : 2 <= 3 OK`),
+  followed by the figure whose explanation now lives in a legend placed outside the axes
+  (green = S, purple arrow = forcing arcs, grey = other vertices). Applied to
+  [docs/presentation_snippets.py](docs/presentation_snippets.py) (all case cells) and
+  [docs/standalone_H.py](docs/standalone_H.py); figures regenerated
+  ([demo_house.png](docs/demo_house.png), [demo_c5.png](docs/demo_c5.png),
+  [demo_H.png](docs/demo_H.png)); all cells re-executed headlessly, standalone agrees.
+
 **Current deliverables**
 
 - `zf/` — 7 modules, 528 lines, standard-library only. Core (338 lines, zero
@@ -69,7 +80,10 @@ Earlier versions of this report are in git; round 17 consolidated them.
 | 14 | 11-23 | `55ddf70` | owner's graph H as a case cell (bags verbatim, already nice) |
 | 15 | 11-23 | `2f8afc4` | standalone one-paste snippet for H |
 | 16 | 11-23 | `868b23f` | connectedness gate; disconnected examples removed from presentation |
-| 17 | 11-24 | this commit | consolidation of REPORT and HANDOFF |
+| 17 | 11-24 | `ccac571` | consolidation of REPORT and HANDOFF |
+| 18 | 11-24 | `e128a12` | git hygiene: ignore `.ipynb_checkpoints/`; audit of tracked/untracked |
+| 19 | 11-24 | `17d6ae1` | record ruling: `demo.ipynb` stays untracked |
+| 20 | 11-24 | this commit | notebook print format: line-by-line results + aligned bound; legend outside axes |
 
 **Verification evidence (cumulative, throwaway scripts deleted after use):** round 1: 111 unit
 tests + 336 prototype trials; round 2: 960/960 closure parity vs the parallel project; round 3:

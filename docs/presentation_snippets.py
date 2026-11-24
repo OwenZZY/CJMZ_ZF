@@ -7,6 +7,8 @@ sys.path.insert(0, "/Users/OwenZhang/DeepSeekHarness/zf-approx")
 
 import networkx as nx
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
+from matplotlib.lines import Line2D
 import zf                      # our implementation: stdlib-only, one export
 
 %matplotlib inline
@@ -14,11 +16,26 @@ import zf                      # our implementation: stdlib-only, one export
 #   pip install networkx matplotlib
 
 
+def report(r, bags):
+    """Line-by-line results, with the guarantee bound aligned and checked."""
+    w = max(map(len, bags)) - 1
+    nS, nF = len(r.zf_set), len(r.forts)
+    print(f"S        = {r.zf_set}")
+    print(f"forts    = {[sorted(f) for f in r.forts]}")
+    print(f"arcs     = {r.arcs}")
+    print(f"|S|      = {nS}")
+    print(f"w        = {w}")
+    print(f"|F|      = {nF}")
+    print(f"(w+1)|F| = {(w + 1) * nF}")
+    print(f"|S| <= (w+1)|F| : {nS} <= {(w + 1) * nF}  "
+          f"{'OK' if nS <= (w + 1) * nF else 'VIOLATED'}")
+
+
 def present(G, pos, r):
-    """One figure per case: zero forcing set S in green, forcing arcs as
-    purple arrows. Forts are printed by the case cell, not drawn."""
+    """One figure per case: S green, forcing arcs purple arrows.
+    The explanation lives in the legend (outside the axes, never over nodes)."""
     S = set(r.zf_set)
-    fig, ax = plt.subplots(figsize=(5.6, 4.6 if G.number_of_edges() else 2.6))
+    fig, ax = plt.subplots(figsize=(7.6, 4.6 if G.number_of_edges() else 2.8))
     colors = ["#2ca02c" if v in S else "#cfcfcf" for v in G.nodes]
     nx.draw_networkx(G, pos, ax=ax, node_color=colors, node_size=750,
                      font_weight="bold", edge_color="#888888")
@@ -31,7 +48,11 @@ def present(G, pos, r):
         nx.draw_networkx_nodes(G, pos, nodelist=sorted(S), ax=ax,
                                node_color="#2ca02c", node_size=750)
         nx.draw_networkx_labels(G, pos, ax=ax, font_weight="bold")
-    ax.set_title(f"S = {sorted(S)} (green)\nforcing arcs A = {list(r.arcs)} (purple)")
+    ax.legend(handles=[Patch(color="#2ca02c", label="S (zero forcing set)"),
+                       Line2D([0], [0], color="#7c3aed", lw=2.5, marker=">",
+                              markersize=7, label="forcing arcs A"),
+                       Patch(color="#cfcfcf", label="other vertices")],
+              loc="center left", bbox_to_anchor=(1.0, 0.5))
     ax.margins(0.15)
     fig.tight_layout()
     plt.show()
@@ -45,9 +66,7 @@ pos = {1: (0, 0), 2: (0, 1), 3: (1, 1), 4: (1, 0), 5: (0.5, 1.8)}
 bags = [{1, 4}, {1, 3, 4}, {1, 2, 3}, {2, 3, 5}]    # width 2, not nice
 
 r = zf.zf_via_path_decomp(G, bags)
-print("S =", r.zf_set, "| forts =", [sorted(f) for f in r.forts], "| arcs =", r.arcs)
-w = max(map(len, bags)) - 1
-print(f"guarantee: |S| = {len(r.zf_set)} <= ({w}+1)*{len(r.forts)} = {(w+1)*len(r.forts)}")
+report(r, bags)
 present(G, pos, r)
 
 # %% [3] Case: C5 — the cycle from spec2 (demo §5)
@@ -56,9 +75,7 @@ pos = nx.circular_layout(G)
 bags = [{0, 1}, {0, 1, 2}, {0, 2, 3}, {0, 3, 4}]    # width 2, not nice
 
 r = zf.zf_via_path_decomp(G, bags)
-print("S =", r.zf_set, "| forts =", [sorted(f) for f in r.forts], "| arcs =", r.arcs)
-w = max(map(len, bags)) - 1
-print(f"guarantee: |S| = {len(r.zf_set)} <= ({w}+1)*{len(r.forts)} = {(w+1)*len(r.forts)}")
+report(r, bags)
 present(G, pos, r)
 
 # %% [4] Case: the owner's graph H — 11 vertices, bags already nice
@@ -99,7 +116,5 @@ pos = {1: (0, 2), 2: (0, 1), 3: (1, 1.5),
        9: (4, 1.5), 10: (5, 2), 11: (5, 1)}
 
 r = zf.zf_via_path_decomp(H, bags)
-print("S =", r.zf_set, "| forts =", [sorted(f) for f in r.forts], "| arcs =", r.arcs)
-w = max(map(len, bags)) - 1
-print(f"guarantee: |S| = {len(r.zf_set)} <= ({w}+1)*{len(r.forts)} = {(w+1)*len(r.forts)}")
+report(r, bags)
 present(H, pos, r)

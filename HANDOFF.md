@@ -77,8 +77,9 @@ Status and history: [REPORT.md](REPORT.md).
 ## 4. Optional next items (defaults stand; only on your word)
 
 1. **Pathwidth / building bags from a graph** — your API point 2. *Default: out of scope.*
-2. **Notebook-phase extras** — more worked examples, direct guarantee display. *Deferred by you
-   (round 11) to your Jupyter presentation of the paper.*
+2. **Notebook-phase extras** — more worked examples; further guarantee-display polish.
+   *The line-by-line aligned bound print landed in round 20; the rest stays deferred by you
+   to your Jupyter presentation of the paper.*
 3. **Public release** — packaging (README/pyproject/license) and the SPEC-v1 §4 name proposal.
    *Default: keep the names; `graph.py`/`arcs.py` stay generic unless you want a `zf_` prefix.*
 4. **Disconnected graphs at the API** — e.g. per-component runs unioned. *Default: rejected
@@ -125,6 +126,11 @@ examples removed from snippets and demo.
 
 **2026-11-24 (round 17).** "we now reach another point of cleaning up REPORT, HANDOFF, and
 commit" — this consolidation.
+
+**2026-11-24 (round 20).** Make the guarantee explicit in the notebook: print line by line
+(S / forts / arcs, then |S|, w, |F|, (w+1)|F| and the checked inequality, aligned), then the
+picture with the explanation in a legend — implemented as `report(r, bags)` + legend outside
+the axes in `present`, in the snippets and the standalone H file.
 
 ## 7. Pointers
 
