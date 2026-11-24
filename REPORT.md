@@ -83,7 +83,7 @@ Earlier versions of this report are in git; round 17 consolidated them.
 | 17 | 11-24 | `ccac571` | consolidation of REPORT and HANDOFF |
 | 18 | 11-24 | `e128a12` | git hygiene: ignore `.ipynb_checkpoints/`; audit of tracked/untracked |
 | 19 | 11-24 | `17d6ae1` | record ruling: `demo.ipynb` stays untracked |
-| 20 | 11-24 | this commit | notebook print format: line-by-line results + aligned bound; legend outside axes |
+| 20 | 11-24 | `0adf056` | notebook print format: line-by-line results + aligned bound; legend outside axes |
 
 **Verification evidence (cumulative, throwaway scripts deleted after use):** round 1: 111 unit
 tests + 336 prototype trials; round 2: 960/960 closure parity vs the parallel project; round 3:
