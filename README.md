@@ -5,16 +5,14 @@ algorithm for the **zero forcing number** from
 
 > {B. Cameron, J. Janssen, R. Mathew, Z. Zhang (2025) An approximation algorithm for zero forcing, *Discrete Applied Mathematics*, **383**, 227--242, https://www.sciencedirect.com/science/article/pii/S0166218X2500722X. 
 
-Given a graph and a path decomposition of width `w`, the algorithm returns a zero forcing
-set `S`, a fort packing `F`, and the forcing arcs `A`, with the guaranteed bound
+Given a graph and a path decomposition of width `w`, the algorithm returns a zero forcing set `S`, a fort packing `F`, and the forcing arcs `A`, with the guaranteed bound
 
     |S| ≤ (w + 1) · |F|.
 
-Because `|F| ≤ Z(G) ≤ |S|`, the returned set is a `(w + 1)`-approximation of the zero
-forcing number `Z(G)`; with an optimal decomposition (`w = pw(G)`) this is the paper's
-pathwidth-based approximation ratio. The core trusts suitable inputs and contains no
-validation; a thin outside layer checks them (connected graph; bags form a path
-decomposition) and nicifies the decomposition before running the algorithm.
+Because `|F| ≤ Z(G) ≤ |S|`, the returned set is a `(w + 1)`-approximation of the zero forcing number `Z(G)`; with an optimal decomposition (`w = pw(G)`) this is the paper's pathwidth-based approximation ratio. The core trusts suitable inputs and contains no validation; a thin outer layer checks them (connected graph; bags form a path decomposition) and nicifies the decomposition before running the algorithm.
+
+## Spec Coding
+This notebook demonstrates the `zf` package. The implementation was produced in a spec-coding workflow with DeepSeek V4.1 Flash (`deepseek-v4.1-flash-1017`) and Qwen 4 Max (`qwen4-max-preview`), used for specification review, implementation, and checking; all algorithmic decisions and final verification are the authors'. See the README, "How this implementation was built".
 
 ## Quickstart
 
