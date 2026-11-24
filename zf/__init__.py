@@ -8,7 +8,7 @@ graph is a networkx.Graph (its nodes are the vertex names) and bags is
 a list of sets of names forming a path decomposition (not necessarily
 nice; checked by the layer, which halts with ValueError if not).
 Returns a names-based ZFResult (zf_set, forts, arcs). The translation
-layer lives in zf/api.py; the lean index-based core is internal
+layer lives in zf/api.py; the index-based core is internal
 (importable from its submodules, not exported here).
 See SPEC-v1.md for the contract and docs/definitions.md for the math.
 """

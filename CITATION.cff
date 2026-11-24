@@ -1,0 +1,44 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the paper below."
+title: "zf-approx: zero forcing approximation via nice path decompositions"
+type: software
+version: 0.3.0
+date-released: "2026-11-24"
+authors:
+  - family-names: Cameron
+    given-names: Ben
+  - family-names: Janssen
+    given-names: Jeannette
+  - family-names: Mathew
+    given-names: Rogers
+  - family-names: Zhang
+    given-names: Zhiyuan
+repository-code: "https://github.com/OwenZZY/CJMZ_ZF"
+url: "https://github.com/OwenZZY/CJMZ_ZF"
+abstract: >-
+  A standard-library-only Python implementation of the deterministic approximation
+  algorithm for the zero forcing number. Given a graph and a path decomposition of
+  width w, it returns a zero forcing set S, a fort packing F and the forcing arcs A
+  with |S| <= (w+1)|F|.
+keywords:
+  - zero forcing
+  - fort packing
+  - path decomposition
+  - approximation algorithm
+references:
+  - type: article
+    title: "An approximation algorithm for zero forcing"
+    authors:
+      - family-names: Cameron
+        given-names: Ben
+      - family-names: Janssen
+        given-names: Jeannette
+      - family-names: Mathew
+        given-names: Rogers
+      - family-names: Zhang
+        given-names: Zhiyuan
+    year: 2025
+    journal: "Discrete Applied Mathematics"
+    volume: 383
+    doi: "10.1016/j.dam.2025.12.013"
+    url: "https://doi.org/10.1016/j.dam.2025.12.013"

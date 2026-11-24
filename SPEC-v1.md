@@ -1,6 +1,8 @@
 # SPEC v1 — zero forcing approximation via nice path decomposition (`zf`)
 
-Supersedes `SPEC.md` (v0), which is kept untouched per `AGENTS.md` rule 7.
+An untracked `SPEC.md` (v0) exists in the working tree; it is a discarded draft and is not part
+of the public artifact. This file is the operative specification.
+
 Source: Cameron–Janssen–Mathew–Zhang, arXiv:2402.08866v1,
 `resources/paper/arXiv-2402.08866v1/2024-02-13-Zero_Forcing_Approx_Alg.tex` (976 lines; cited below as `tex:L`).
 
@@ -12,10 +14,10 @@ the mathematical definitions live in `docs/definitions.md`, one item per line (S
 **§7 is the outside API (round 9): the single public function, the translation layer, and the
 nice-ification convention — the only section an outside caller needs.**
 
-**Round 3 (2026-11-21), owner ruling.** The core is lean and internal: inputs are assumed
+**Round 3 (2026-11-21), owner ruling.** The core is trusting and internal: inputs are assumed
 suitable, and `zf/` contains no validation, no try/except, and no raised exceptions. The
-round-2 state (defensive core, tests, examples, README) is preserved verbatim in
-`zf-round2-backup.zip`.
+round-2 state (defensive core, tests, examples, README) is preserved in the project
+archive.
 
 **Round 9 (2026-11-21), owner ruling.** The outside API is frozen and implemented (§7): one
 public function (NetworkX graph + list of bags), a names-based result object, and a translation
@@ -317,7 +319,7 @@ L8  return ZFResult(tuple(A.sources()), tuple(forts), A)   # L5 once, at the end
 5. **Isolated vertices / disconnected graphs.** (D1) alone does not force isolated vertices into
    bags. Resolution: the precise "suitable input" condition is D1–D4 plus every vertex lying in
    some bag — weaker than the paper's connectedness assumption. It is the caller's responsibility;
-   the lean core (round 3) does not check it.
+   the core (round 3) does not check it.
 6. **`S` maintenance.** v0 keeps `S` in the loop; the paper (tex:L685) explicitly allows dropping
    (L5)/(L6b). Resolution: drop them (the [L6b] trick); `ZFResult.zf_set` is computed once at the end.
 7. **Forcing-order canon (round 2, 2026-11-21).** v0/v1 initially used a FIFO queue; the parallel
@@ -408,8 +410,8 @@ The only place that touches external formats. Steps:
   then `W = white(∅, G) = V`, so the trivial fort `V` is added and the final `A.reverse()`
   flips the last chain — paper-faithful (traced against the algorithm box). Hence for
   `n ≥ 1` every run returns at least one fort.
-- API provenance (HANDOFF §6/§8): owner point 1 = the shape (round 8); point 2 =
-  decomposition provenance (HANDOFF §4.2) — building a decomposition from a graph
+- API provenance: owner point 1 = the shape (round 8); point 2 =
+  decomposition provenance — building a decomposition from a graph
   (pathwidth) is **out of scope unless asked**: the caller supplies bags, the layer checks
   and nicifies them. Point 3: **closed round 11** — the owner does not recognize it; recorded
   as none, nothing pending.
@@ -431,3 +433,21 @@ The only place that touches external formats. Steps:
   removed from the presentation). The layer now enforces the paper's connectedness assumption
   (tex:L822); the empty-intersection nicification path remains reachable only by calling the
   internal core directly.
+
+---
+
+## 8. Local setup (for an LLM or agent)
+
+The repository is self-contained; the only network access needed is to install the demo extras.
+
+- Python ≥ 3.10. The package's only runtime dependency is `networkx`: the public entry point
+  takes a NetworkX graph (it reads only `graph.nodes` and `graph.edges`, so any object
+  exposing those attributes also works). `matplotlib` is needed only for the notebook figures.
+- From the repository root: `pip install -e .` (package + networkx); add the notebook extras
+  with `pip install -e ".[demo]"` (matplotlib).
+- Self-check: `python3 examples.py` prints the worked examples and ends with
+  "All example assertions passed." (standard library only).
+- `README.md` is generated from `demo.ipynb`; regenerate with
+  `jupyter nbconvert --to markdown demo.ipynb --output README.md` — never edit it by hand.
+- Paper (reference only, not vendored): arXiv <https://arxiv.org/abs/2402.08866>,
+  DOI <https://doi.org/10.1016/j.dam.2025.12.013>.

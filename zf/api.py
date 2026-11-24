@@ -1,7 +1,6 @@
 """Outside API: the single public function and its translation layer.
 
-The only place that touches external formats (HANDOFF.md section 8,
-SPEC-v1.md section 7). The outside gives a NetworkX graph (its nodes are
+The only place that touches external formats (`SPEC-v1.md` §7). The outside gives a NetworkX graph (its nodes are
 the vertex names) and a list of bags (sets of names) forming a path
 decomposition — not necessarily nice. This layer CHECKS that the graph is
 connected (_is_connected, owner ruling round 16) and that the bags really

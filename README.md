@@ -11,12 +11,21 @@ Given a graph and a path decomposition of width `w`, the algorithm returns a zer
 
 Because `|F| ≤ Z(G) ≤ |S|`, the returned set is a `(w + 1)`-approximation of the zero forcing number `Z(G)`; with an optimal decomposition (`w = pw(G)`) this is the paper's pathwidth-based approximation ratio. The core trusts suitable inputs and contains no validation; a thin outer layer checks them (connected graph; bags form a path decomposition) and nicifies the decomposition before running the algorithm.
 
-## Spec Coding
-This notebook demonstrates the `zf` package. The implementation was produced in a spec-coding workflow with DeepSeek V4.1 Flash (`deepseek-v4.1-flash-1017`) and Qwen 4 Max (`qwen4-max-preview`), used for specification review, implementation, and checking; all algorithmic decisions and final verification are the authors'. See the README, "How this implementation was built".
+## Install
+
+Requires Python ≥ 3.10. From a clone:
+
+    git clone https://github.com/OwenZZY/CJMZ_ZF.git
+    cd CJMZ_ZF
+    pip install -e .
+
+The package's only runtime dependency is `networkx`: the public entry point takes a NetworkX graph (it reads `graph.nodes` and `graph.edges`, so any object exposing those attributes works). The notebook additionally uses `matplotlib` for its figures; install both extras with `pip install -e ".[demo]"`.
+
+`python3 examples.py` runs self-checking worked examples (standard library only).
 
 ## Quickstart
 
-    pip install networkx matplotlib   # only needed to build inputs and draw results
+    pip install -e ".[demo]"   # package + notebook extras (networkx, matplotlib)
 
 ```python
 import networkx as nx
@@ -30,6 +39,11 @@ r = zf.zf_via_path_decomp(G, bags)
 print(r.zf_set)   # (3, 4)
 print(r.forts)    # (frozenset({1, 2, 3, 4}),)
 print(r.arcs)     # ((1, 2), (2, 5), (4, 1))
+
+## Spec Coding
+
+This notebook demonstrates the `zf` package. The implementation was produced in a spec-coding workflow with DeepSeek V4.1 Flash (`deepseek-v4.1-flash-1017`) and Qwen 4 Max (`qwen4-max-preview`), used for specification review, implementation, and checking; all algorithmic decisions and final verification are the authors'. The specification it was implemented against is [`SPEC-v1.md`](SPEC-v1.md).
+
 
 
 ```python
@@ -260,3 +274,13 @@ present(H, pos, r)
 ```python
 
 ```
+
+## Citation
+
+If you use this implementation, please cite the paper:
+
+> B. Cameron, J. Janssen, R. Mathew, Z. Zhang, *An approximation algorithm for zero forcing*,
+> Discrete Applied Mathematics **383** (2025) 227--242. DOI [10.1016/j.dam.2025.12.013](https://doi.org/10.1016/j.dam.2025.12.013); arXiv [2402.08866](https://arxiv.org/abs/2402.08866).
+
+A machine-readable record is in [`CITATION.cff`](CITATION.cff).
+

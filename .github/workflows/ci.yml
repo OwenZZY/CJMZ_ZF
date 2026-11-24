@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [zf-approx]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  examples:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Byte-compile the package
+        run: python3 -m compileall -q zf
+      - name: Run the self-checking examples
+        run: python3 examples.py

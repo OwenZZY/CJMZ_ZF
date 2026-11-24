@@ -86,8 +86,8 @@ Decision below.)
    touches the region through the bag `X_t ∪ X_z`, which is blue, so it has no white neighbor and
    can never force.* For arbitrary host/blue they differ: the full-graph version lets an outside
    vertex force its unique white neighbor; the induced version cannot. The main algorithm
-   never makes such calls. (Illustrated in `examples.py`; the round-2 test pins are in
-   `zf-round2-backup.zip`.)
+   never makes such calls. (Illustrated in `examples.py`; earlier test pins are in the project
+   archive.)
 7. **Interface differences are cosmetic:** bytearray masks + `ArcSet` + early exit vs iterable
    blue + pair list; `shift_by` is an arc name-space offset in the reference, irrelevant to the
    engine. No semantic impact.

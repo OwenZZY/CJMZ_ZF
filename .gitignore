@@ -26,3 +26,17 @@ AGENTS.md
 HANDOFF.md
 REPORT.md
 zf-round2-backup.zip
+
+# Local-only inputs and internal specs (never public)
+# Exception: the arXiv source of the canonical paper is public and tracked.
+/resources/*
+!/resources/paper
+/resources/paper/*
+!/resources/paper/arXiv-2402.08866v1
+/resources/paper/arXiv-2402.08866v1/*
+!/resources/paper/arXiv-2402.08866v1/2024-02-13-Zero_Forcing_Approx_Alg.tex
+/SPEC.md
+/spec2
+
+# Local-only working files
+/TODO.local.md
