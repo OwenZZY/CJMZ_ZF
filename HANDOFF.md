@@ -68,9 +68,10 @@ Status and history: [REPORT.md](REPORT.md).
   `76700f8` core rounds 1–5 → `aa5d70c` handoff → `b53242d` round-8 API design → `88d1196`
   round 9 → `22aadf0` round 10 → `fa1e848` round 11 → `18edf22` round 12 → `c4d093b` round 13 →
   `55ddf70` round 14 → `2f8afc4` round 15 → `868b23f` round 16 → round 17 (this consolidation).
-- Left as-is, never committed by the agent: your [AGENTS.md](AGENTS.md) edit; untracked
-  `SPEC.md` (your v0), `resources/` (the papers), `spec2`, and your `demo.ipynb` (owner ruling,
-  round 18: keep untracked — local working file, not a repo deliverable);
+- Your [AGENTS.md](AGENTS.md) edit: committed in round 22 per your "commit anyway" instruction
+  (it is the working agreement in force). Still untracked, never pushed: `SPEC.md` (your v0),
+  `resources/` (the papers — third-party, must stay out), `spec2`, and your `demo.ipynb`
+  (owner ruling, round 18: keep untracked — local working file, not a repo deliverable);
   `.ipynb_checkpoints/` ignored since round 18.
 - No push and no remote change (AGENTS.md rule 7).
 
@@ -137,6 +138,13 @@ the axes in `present`, in the snippets and the standalone H file.
 `Copyright (c)` line names all authors. The license choice is therefore joint: the owner will
 ask co-authors about MIT; **no LICENSE file until they reply**. README plan: owner adds markdown
 cells to `demo.ipynb` himself, then converts to markdown (`README.md`) / HTML for GitHub.
+
+**2026-11-24 (round 22).** Owner: leave the license out until later, but commit and push anyway.
+Push target NOT yet decided: `origin` currently points at the parallel project
+(`https://github.com/OwenZZY/CJMZ_ZF.git`); pushing this history there would collide with that
+repo — do not push to `origin` without an explicit target decision. Conversion tooling: use
+`jupyter nbconvert` (Homebrew, 7.17.2); the system `/usr/bin/python3 -m nbconvert` install is
+broken (traitlets/jupyter_core mismatch, `KeyError: template_paths`).
 
 ## 7. Pointers
 
