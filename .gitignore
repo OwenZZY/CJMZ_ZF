@@ -19,3 +19,10 @@ dist/
 # should link to https://arxiv.org/abs/2402.08866 instead of vendoring it
 # (authorship/redistribution is a Stage 5 decision; see HANDOFF D6).
 docs/arXiv-2402.08866v1/
+
+# Internal coordination documents — local only, not public deliverables
+# (owner ruling, round 24). Kept on disk, ignored by git.
+AGENTS.md
+HANDOFF.md
+REPORT.md
+zf-round2-backup.zip
