@@ -1,6 +1,6 @@
 # zf-approx
 
-A lean, standard-library-only Python implementation of the deterministic approximation
+A standard-library-only Python implementation of the deterministic approximation
 algorithm for the **zero forcing number** from
 
 > {B. Cameron, J. Janssen, R. Mathew, Z. Zhang (2025) An approximation algorithm for zero forcing, *Discrete Applied Mathematics*, **383**, 227--242, https://www.sciencedirect.com/science/article/pii/S0166218X2500722X. 
